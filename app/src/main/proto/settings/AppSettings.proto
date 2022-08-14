@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+option java_package = "me.danlowe.meshcommunicator";
+option java_multiple_files = true;
+
+message AppSettings {
+  optional string userId = 1;
+  optional string userName = 2;
+}
