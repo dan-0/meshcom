@@ -9,6 +9,7 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import me.danlowe.meshcommunicator.AppSettings
+import me.danlowe.meshcommunicator.features.datastore.AppSettingsSerializer
 import javax.inject.Singleton
 
 /**

@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">MeshCommunicator</string>
     <string name="sign_in">Sign In</string>
+    <string name="username">Username</string>
+    <string name="sign_in_button">Sign In</string>
+    <string name="username_error">Username must be between 5 and 55 characters</string>
 </resources>

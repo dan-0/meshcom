@@ -1,4 +1,4 @@
-package me.danlowe.meshcommunicator.di.datastore
+package me.danlowe.meshcommunicator.features.datastore
 
 import androidx.datastore.core.Serializer
 import com.google.protobuf.InvalidProtocolBufferException
@@ -7,6 +7,7 @@ import timber.log.Timber
 import java.io.InputStream
 import java.io.OutputStream
 
+@Suppress("BlockingMethodInNonBlockingContext")
 object AppSettingsSerializer : Serializer<AppSettings> {
     override val defaultValue: AppSettings = AppSettings.getDefaultInstance()
 
