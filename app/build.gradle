@@ -5,6 +5,7 @@ plugins {
     id 'dagger.hilt.android.plugin'
     id "com.google.protobuf"
     id 'kotlin-parcelize'
+    id 'kotlinx-serialization'
 }
 
 android {
@@ -129,4 +130,8 @@ dependencies {
     implementation "androidx.room:room-runtime:$roomVersion"
     kapt "androidx.room:room-compiler:$roomVersion"
     implementation "androidx.room:room-ktx:$roomVersion"
+
+    // Serialization
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.0"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.4.0"
 }

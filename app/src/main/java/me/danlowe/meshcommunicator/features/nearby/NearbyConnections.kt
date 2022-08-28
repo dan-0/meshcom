@@ -1,0 +1,225 @@
+package me.danlowe.meshcommunicator.features.nearby
+
+import androidx.datastore.core.DataStore
+import com.google.android.gms.nearby.connection.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
+import me.danlowe.meshcommunicator.AppSettings
+import me.danlowe.meshcommunicator.features.db.conversations.ContactDto
+import me.danlowe.meshcommunicator.features.db.conversations.ContactsDao
+import me.danlowe.meshcommunicator.features.db.messages.MessageDto
+import me.danlowe.meshcommunicator.features.db.messages.MessagesDao
+import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
+import me.danlowe.meshcommunicator.features.dispatchers.buildHandledIoContext
+import me.danlowe.meshcommunicator.features.nearby.data.EndpointId
+import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
+import me.danlowe.meshcommunicator.features.nearby.data.NearbyMessageType
+import me.danlowe.meshcommunicator.util.ext.toHexString
+import timber.log.Timber
+
+class NearbyConnections(
+    dispatchers: DispatcherProvider,
+    private val nearbyClient: ConnectionsClient,
+    private val appSettings: DataStore<AppSettings>,
+    private val contactsDao: ContactsDao,
+    private val messagesDao: MessagesDao,
+) {
+
+    private val supervisorJob = SupervisorJob()
+
+    private val scope = CoroutineScope(supervisorJob)
+
+    private val dbContext = dispatchers.buildHandledIoContext {  }
+
+    var localUserName: String = ""
+
+    private val _activeConnections = hashMapOf<ExternalUserId, EndpointId>()
+
+    private val _activeConnectionsState = MutableStateFlow(_activeConnections.keys)
+    val activeConnectionsState: Flow<Set<ExternalUserId>> = _activeConnectionsState
+
+    private val payloadBuffer = MutableSharedFlow<ByteArray>(0, 100, BufferOverflow.DROP_OLDEST)
+
+    init {
+        scope.launch(dispatchers.io) {
+            appSettings.data.collect {
+                localUserName = it.userId
+                // TODO need to detect change and update connections accordingly
+            }
+        }
+
+        scope.launch(dbContext) {
+            payloadBuffer.collect { payloadBytes ->
+                val type = NearbyMessageType.fromByteArray(payloadBytes)
+
+                when (type) {
+                    is NearbyMessageType.Message -> {
+                        val dto = MessageDto(
+                            uuid = type.uuid,
+                            conversationId = type.conversationId,
+                            originUserId = type.originUserId,
+                            message = type.message,
+                            timeSent = type.timeSent,
+                            timeReceived = type.timeReceived
+                        )
+
+                        messagesDao.insert(dto)
+                    }
+                    is NearbyMessageType.Name -> {
+                        val contact = contactsDao.getByUserId(type.originUserId)
+
+                        if (contact == null) {
+                            val dto = ContactDto(
+                                userName = type.name,
+                                userId = type.originUserId
+                            )
+                        } else {
+                            contactsDao.updateContact(
+                                contact.copy(userName = type.name)
+                            )
+                        }
+
+                    }
+                    is NearbyMessageType.Unknown -> {
+                        /*
+                            Note, this is for debugging in a hobby project. Please don't log
+                            potentially personal user data if your users think this data is
+                            secure.
+                         */
+                        Timber.e("Unknown message type with data: ${type.bytes.toHexString()}")
+                    }
+                }
+            }
+        }
+    }
+
+    private val advertisingOptions = AdvertisingOptions.Builder()
+        .setStrategy(Strategy.P2P_CLUSTER)
+        .build()
+
+    private val discoveryOptions = DiscoveryOptions.Builder()
+        .setStrategy(Strategy.P2P_CLUSTER)
+        .build()
+
+    private val payloadCallback = object : PayloadCallback() {
+        override fun onPayloadReceived(endpointId: String, payload: Payload) {
+            when (payload.type) {
+                Payload.Type.BYTES -> {
+                    val bytes = payload.asBytes() ?: return
+                    payloadBuffer.tryEmit(bytes)
+                }
+            }
+        }
+
+        override fun onPayloadTransferUpdate(endpointId: String, update: PayloadTransferUpdate) {
+            // Nothing to do here
+        }
+
+    }
+
+    private val connectionLifecycleCallback = object : ConnectionLifecycleCallback() {
+
+        override fun onConnectionInitiated(endpointId: String, connectionInfo: ConnectionInfo) {
+            // TODO Need to add some kind of authentication procedure
+            nearbyClient.acceptConnection(endpointId, payloadCallback)
+
+            val endpoint = EndpointId(endpointId)
+            val userId = ExternalUserId(connectionInfo.endpointName)
+            addConnection(endpoint, userId)
+        }
+
+        override fun onConnectionResult(endpointId: String, connectionResolution: ConnectionResolution) {
+            // TODO determine need
+        }
+
+        override fun onDisconnected(endpointId: String) {
+            val endpoint = EndpointId(endpointId)
+            removeConnection(endpoint)
+        }
+    }
+
+    private val endpointDiscoveryCallback = object : EndpointDiscoveryCallback() {
+
+        override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
+            nearbyClient
+                .requestConnection(localUserName, endpointId, connectionLifecycleCallback)
+                .addOnSuccessListener {
+                    // TODO
+                    Timber.d("Connection requested successfully")
+                }
+                .addOnFailureListener {
+                    // TODO
+                    Timber.w(it, "Connection request failed")
+                }
+        }
+
+        override fun onEndpointLost(endpointId: String) {
+            val endpoint = EndpointId(endpointId)
+            removeConnection(endpoint)
+        }
+    }
+
+    fun startAdvertising() {
+
+        nearbyClient.startAdvertising(
+            localUserName, SERVICE_ID, connectionLifecycleCallback, advertisingOptions
+        )
+            .addOnSuccessListener {
+                Timber.d("Advertising started")
+            }
+            .addOnFailureListener {
+                Timber.w(it, "Advertising failed")
+            }
+    }
+
+    fun stopAdvertising() {
+        nearbyClient.stopAdvertising()
+    }
+
+    fun startDiscovery() {
+
+        nearbyClient.startDiscovery(SERVICE_ID, endpointDiscoveryCallback, discoveryOptions)
+            .addOnSuccessListener {
+                // TODO
+                Timber.d("Discovery started")
+            }
+            .addOnFailureListener {
+                // TODO
+                Timber.w(it, "Discovery failed")
+            }
+    }
+
+    fun stopDiscovery() {
+        nearbyClient.stopDiscovery()
+    }
+
+    fun addConnection(endpointId: EndpointId, externalUserId: ExternalUserId) {
+        _activeConnections[externalUserId] = endpointId
+        _activeConnectionsState.value = _activeConnections.keys
+    }
+
+    fun removeConnection(endpointId: EndpointId) {
+        val connection = _activeConnections.firstNotNullOf { entry ->
+            if (entry.value == endpointId) {
+                entry.key
+            } else {
+                null
+            }
+        }
+        _activeConnections.remove(connection)
+        _activeConnectionsState.value = _activeConnections.keys
+    }
+
+    companion object {
+
+        private const val SERVICE_ID = "me.danlowe.meshcommunicator"
+
+    }
+
+}
+

@@ -1,4 +1,4 @@
-package me.danlowe.meshcommunicator.mesh.di
+package me.danlowe.meshcommunicator.di.nearby
 
 import android.content.Context
 import com.google.android.gms.nearby.Nearby

@@ -7,9 +7,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import me.danlowe.meshcommunicator.db.AppDatabase
-import me.danlowe.meshcommunicator.db.conversations.ConversationsDao
-import me.danlowe.meshcommunicator.db.messages.MessagesDao
+import me.danlowe.meshcommunicator.features.db.AppDatabase
+import me.danlowe.meshcommunicator.features.db.conversations.ContactsDao
+import me.danlowe.meshcommunicator.features.db.messages.MessagesDao
 import javax.inject.Singleton
 
 @Module
@@ -30,8 +30,8 @@ class DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideConversationsDao(appDatabase: AppDatabase): ConversationsDao {
-        return appDatabase.conversationsDao()
+    fun provideConversationsDao(appDatabase: AppDatabase): ContactsDao {
+        return appDatabase.contactsDao()
     }
 
     @Provides

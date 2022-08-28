@@ -1,4 +1,4 @@
-package me.danlowe.meshcommunicator.db.messages
+package me.danlowe.meshcommunicator.features.db.messages
 
 import androidx.room.Dao
 import androidx.room.Insert
@@ -11,9 +11,9 @@ import androidx.room.Query
 interface MessagesDao {
 
     @Query("SELECT * FROM messages")
-    fun getAll(): List<MessageDto>
+    suspend fun getAll(): List<MessageDto>
 
     @Insert
-    fun insert(messageDto: MessageDto)
+    suspend fun insert(messageDto: MessageDto)
 
 }
