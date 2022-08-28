@@ -1,49 +1,89 @@
+@file:OptIn(ExperimentalComposeUiApi::class)
+
 package me.danlowe.meshcommunicator.ui.screen.signin
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Face
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import me.danlowe.meshcommunicator.R
+import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInEvent
+import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInNavEvent
 import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInState
 import me.danlowe.meshcommunicator.ui.theme.Dimens
 import me.danlowe.meshcommunicator.ui.theme.MeshCommunicatorTheme
+import timber.log.Timber
 
 @Composable
-fun SignInScreen(viewModel: SignInViewModel) {
-    val userNameValue = rememberSaveable(stateSaver = TextFieldValue.Saver) {
-        mutableStateOf(TextFieldValue(""))
+fun SignInScreen(
+    viewModel: SignInViewModel = hiltViewModel(),
+    navEventHandler: (SignInNavEvent) -> Unit
+) {
+    LaunchedEffect(key1 = Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                SignInEvent.Complete -> {
+                    navEventHandler(SignInNavEvent.Complete)
+                }
+            }
+        }
     }
 
-    val isError = when (viewModel.state.collectAsState(initial = SignInState.ValidName).value) {
-        SignInState.InvalidName -> true
-        SignInState.ValidName -> false
+    val isValidationError =
+        when (viewModel.state.collectAsState(initial = SignInState.ValidName).value) {
+            SignInState.InvalidName -> true
+            SignInState.ValidName -> false
+            SignInState.Error -> {
+                // TODO show error screen when made
+                return
+            }
+        }
+
+    Timber.d("Start sign in: $viewModel, $navEventHandler")
+
+    SignInContent(viewModel, navEventHandler, isValidationError)
+}
+
+@Composable
+private fun SignInContent(
+    viewModel: SignInViewModel,
+    navEventHandler: (SignInNavEvent) -> Unit,
+    isValidationError: Boolean
+) {
+
+    Timber.d("In content $viewModel, $isValidationError")
+
+    val userNameValue = rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        mutableStateOf(TextFieldValue(""))
     }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .fillMaxHeight()
             .padding(PaddingValues(horizontal = 16.dp)),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
     ) {
-        UserNameField(userNameValue, isError)
+        UserNameField(userNameValue, viewModel, isValidationError)
         SignInButton(viewModel, userNameValue)
     }
 }
@@ -51,8 +91,12 @@ fun SignInScreen(viewModel: SignInViewModel) {
 @Composable
 private fun UserNameField(
     userNameValue: MutableState<TextFieldValue>,
-    isError: Boolean
+    viewModel: SignInViewModel,
+    isValidationError: Boolean
 ) {
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     Column {
         OutlinedTextField(
             value = userNameValue.value,
@@ -72,11 +116,19 @@ private fun UserNameField(
             },
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Text,
-                capitalization = KeyboardCapitalization.Sentences
+                capitalization = KeyboardCapitalization.Sentences,
+                imeAction = ImeAction.Done,
             ),
-            isError = isError
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    keyboardController?.hide()
+                    viewModel.signIn(userNameValue.value.text)
+                }
+            ),
+            isError = isValidationError
         )
-        if (isError) {
+
+        if (isValidationError) {
             Text(
                 text = stringResource(R.string.username_error),
                 color = MaterialTheme.colors.error,
@@ -92,13 +144,19 @@ private fun SignInButton(
     viewModel: SignInViewModel,
     userNameValue: MutableState<TextFieldValue>
 ) {
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.End,
     ) {
 
         Button(
-            onClick = { viewModel.signIn(userNameValue.value.text) },
+            onClick = {
+                keyboardController?.hide()
+                viewModel.signIn(userNameValue.value.text)
+            },
             shape = CutCornerShape(5),
         ) {
             Text(stringResource(R.string.sign_in_button))
@@ -111,6 +169,7 @@ private fun SignInButton(
 fun PreviewSignInScreen() {
     val vm: SignInViewModel = viewModel()
     MeshCommunicatorTheme {
-        SignInScreen(vm)
+        SignInScreen(vm) {}
     }
 }
+

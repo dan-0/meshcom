@@ -1,16 +1,17 @@
 package me.danlowe.meshcommunicator.ui.screen.signin
 
 import androidx.datastore.core.DataStore
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import me.danlowe.meshcommunicator.AppSettings
 import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
 import me.danlowe.meshcommunicator.features.dispatchers.buildHandledIoContext
 import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInEvent
 import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInState
 import me.danlowe.meshcommunicator.util.ext.EventFlow
+import me.danlowe.meshcommunicator.util.ext.getMutableStateFlow
 import me.danlowe.meshcommunicator.util.ext.launchInContext
 import java.util.*
 import javax.inject.Inject
@@ -19,23 +20,31 @@ import javax.inject.Inject
 class SignInViewModel @Inject constructor(
     private val settingsDataStore: DataStore<AppSettings>,
     dispatchers: DispatcherProvider,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
-
-    private val ioContext = dispatchers.buildHandledIoContext { }
 
     private val _event = EventFlow<SignInEvent>()
     val events: Flow<SignInEvent> = _event
 
-    private val _state = MutableStateFlow<SignInState>(SignInState.ValidName)
+    private val _state = savedStateHandle.getMutableStateFlow<SignInState>(
+        "SignInViewModelState",
+        SignInState.ValidName
+    )
     val state: Flow<SignInState> = _state
 
-    fun signIn(userName: String) {
+    private val ioContext = dispatchers.buildHandledIoContext {
+        _state.value = SignInState.Error
+    }
 
-        if (userName.length < 5 || userName.length > 55) {
+    fun signIn(rawUserName: String) {
+
+        val userName = rawUserName.trim()
+
+        if (isUsernameValid(userName)) {
+            _state.value = SignInState.ValidName
+        } else {
             _state.value = SignInState.InvalidName
             return
-        } else {
-            _state.value = SignInState.ValidName
         }
 
         launchInContext(ioContext) {
@@ -49,6 +58,8 @@ class SignInViewModel @Inject constructor(
             _event.emit(SignInEvent.Complete)
         }
     }
+
+    private fun isUsernameValid(userName: String) = userName.length in 5..55
 
 }
 

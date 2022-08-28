@@ -15,4 +15,9 @@ sealed class AppDestinations(
         R.string.sign_in
     )
 
+    object Conversations : AppDestinations(
+        "Conversations",
+        R.string.conversations
+    )
+
 }

@@ -3,16 +3,16 @@ package me.danlowe.meshcommunicator
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.*
+import androidx.compose.material.Scaffold
+import androidx.compose.material.Text
+import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
@@ -20,15 +20,17 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import me.danlowe.meshcommunicator.nav.AppDestinations
-import me.danlowe.meshcommunicator.ui.greeting.Greeting
+import me.danlowe.meshcommunicator.ui.screen.conversations.ConversationsScreen
 import me.danlowe.meshcommunicator.ui.screen.signin.SignInScreen
-import me.danlowe.meshcommunicator.ui.screen.signin.SignInViewModel
+import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInNavEvent
 import me.danlowe.meshcommunicator.ui.theme.MeshCommunicatorTheme
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         setContent {
             App()
         }
@@ -46,7 +48,7 @@ class MainActivity : ComponentActivity() {
         val updateTitle = { newTitle: String ->
             title.value = newTitle
         }
-        
+
         MeshCommunicatorTheme {
             Scaffold(
                 topBar = {
@@ -66,8 +68,24 @@ class MainActivity : ComponentActivity() {
 
                         updateTitle(stringResource(destination.title))
 
-                        val viewModel: SignInViewModel = hiltViewModel()
-                        SignInScreen(viewModel)
+                        SignInScreen { navEvent ->
+                            when (navEvent) {
+                                SignInNavEvent.Complete -> {
+                                    navController.navigate(
+                                        AppDestinations.Conversations.routeTemplate,
+                                    ) {
+                                        popUpTo(0)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    composableDestination(AppDestinations.Conversations) { _, destination ->
+
+                        updateTitle(stringResource(destination.title))
+
+                        ConversationsScreen()
 
                     }
 
