@@ -78,6 +78,7 @@ class NearbyConnections(
                                 userName = type.name,
                                 userId = type.originUserId
                             )
+                            contactsDao.insert(dto)
                         } else {
                             contactsDao.updateContact(
                                 contact.copy(userName = type.name)
