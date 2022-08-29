@@ -21,6 +21,7 @@ import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
 import me.danlowe.meshcommunicator.features.nearby.data.NearbyMessageType
 import me.danlowe.meshcommunicator.util.ext.toHexString
 import timber.log.Timber
+import java.time.Instant
 
 class NearbyConnections(
     dispatchers: DispatcherProvider,
@@ -34,7 +35,7 @@ class NearbyConnections(
 
     private val scope = CoroutineScope(supervisorJob)
 
-    private val dbContext = dispatchers.buildHandledIoContext {  }
+    private val dbContext = dispatchers.buildHandledIoContext { }
 
     var localUserName: String = ""
 
@@ -59,32 +60,10 @@ class NearbyConnections(
 
                 when (type) {
                     is NearbyMessageType.Message -> {
-                        val dto = MessageDto(
-                            uuid = type.uuid,
-                            conversationId = type.conversationId,
-                            originUserId = type.originUserId,
-                            message = type.message,
-                            timeSent = type.timeSent,
-                            timeReceived = type.timeReceived
-                        )
-
-                        messagesDao.insert(dto)
+                        handleMessage(type)
                     }
                     is NearbyMessageType.Name -> {
-                        val contact = contactsDao.getByUserId(type.originUserId)
-
-                        if (contact == null) {
-                            val dto = ContactDto(
-                                userName = type.name,
-                                userId = type.originUserId
-                            )
-                            contactsDao.insert(dto)
-                        } else {
-                            contactsDao.updateContact(
-                                contact.copy(userName = type.name)
-                            )
-                        }
-
+                        handleName(type)
                     }
                     is NearbyMessageType.Unknown -> {
                         /*
@@ -134,7 +113,10 @@ class NearbyConnections(
             addConnection(endpoint, userId)
         }
 
-        override fun onConnectionResult(endpointId: String, connectionResolution: ConnectionResolution) {
+        override fun onConnectionResult(
+            endpointId: String,
+            connectionResolution: ConnectionResolution
+        ) {
             // TODO determine need
         }
 
@@ -165,7 +147,18 @@ class NearbyConnections(
         }
     }
 
-    fun startAdvertising() {
+    fun start()  {
+        startAdvertising()
+        startDiscovery()
+    }
+
+    fun stop() {
+        stopAdvertising()
+        stopDiscovery()
+    }
+
+
+    private fun startAdvertising() {
 
         nearbyClient.startAdvertising(
             localUserName, SERVICE_ID, connectionLifecycleCallback, advertisingOptions
@@ -178,11 +171,11 @@ class NearbyConnections(
             }
     }
 
-    fun stopAdvertising() {
+    private fun stopAdvertising() {
         nearbyClient.stopAdvertising()
     }
 
-    fun startDiscovery() {
+    private fun startDiscovery() {
 
         nearbyClient.startDiscovery(SERVICE_ID, endpointDiscoveryCallback, discoveryOptions)
             .addOnSuccessListener {
@@ -195,16 +188,16 @@ class NearbyConnections(
             }
     }
 
-    fun stopDiscovery() {
+    private fun stopDiscovery() {
         nearbyClient.stopDiscovery()
     }
 
-    fun addConnection(endpointId: EndpointId, externalUserId: ExternalUserId) {
+    private fun addConnection(endpointId: EndpointId, externalUserId: ExternalUserId) {
         _activeConnections[externalUserId] = endpointId
         _activeConnectionsState.value = _activeConnections.keys
     }
 
-    fun removeConnection(endpointId: EndpointId) {
+    private fun removeConnection(endpointId: EndpointId) {
         val connection = _activeConnections.firstNotNullOf { entry ->
             if (entry.value == endpointId) {
                 entry.key
@@ -214,6 +207,47 @@ class NearbyConnections(
         }
         _activeConnections.remove(connection)
         _activeConnectionsState.value = _activeConnections.keys
+    }
+
+    private suspend fun handleName(type: NearbyMessageType.Name) {
+        val contact = contactsDao.getByUserId(type.originUserId)
+
+        val lastSeen = Instant.now().epochSecond
+
+        if (contact == null) {
+            val dto = ContactDto(
+                userName = type.name,
+                userId = type.originUserId,
+                lastSeen = lastSeen
+            )
+            contactsDao.insert(dto)
+        } else {
+            contactsDao.updateContact(
+                contact.copy(
+                    userName = type.name,
+                    lastSeen = lastSeen
+                )
+            )
+        }
+    }
+
+    private suspend fun handleMessage(type: NearbyMessageType.Message) {
+        val dto = MessageDto(
+            uuid = type.uuid,
+            conversationId = type.conversationId,
+            originUserId = type.originUserId,
+            message = type.message,
+            timeSent = type.timeSent,
+            timeReceived = type.timeReceived
+        )
+
+        messagesDao.insert(dto)
+
+        contactsDao.getByUserId(type.originUserId)?.copy(
+            lastSeen = Instant.now().epochSecond
+        )?.also { contact ->
+            contactsDao.updateContact(contact)
+        }
     }
 
     companion object {

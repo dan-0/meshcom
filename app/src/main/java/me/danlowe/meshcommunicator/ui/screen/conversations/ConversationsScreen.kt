@@ -1,51 +1,50 @@
 package me.danlowe.meshcommunicator.ui.screen.conversations
 
-import android.os.Parcelable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.parcelize.Parcelize
-import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
-import me.danlowe.meshcommunicator.util.ext.getMutableStateFlow
-import javax.inject.Inject
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @Composable
-fun ConversationsScreen() {
+fun ConversationsScreen(
+    viewModel: ConversationsViewModel = hiltViewModel()
+) {
+
+    when (val state = viewModel.state.collectAsState(initial = ConversationsState.Loading).value) {
+        is ConversationsState.Content -> ConversationsList(state.conversations)
+        ConversationsState.Loading -> ConversationsLoading()
+    }
 
 }
 
-@HiltViewModel
-class ConversationsViewModel @Inject constructor(
-    dispatcherProvider: DispatcherProvider,
-    savedStateHandle: SavedStateHandle,
-) : ViewModel() {
-
-    private val _state = savedStateHandle.getMutableStateFlow<ConversationsState>(
-        key = "ConversationsViewModelState",
-        defaultValue = ConversationsState.Loading
-    )
-    val state: Flow<ConversationsState> = _state
-
+@Composable
+private fun ConversationsList(conversations: List<ConversationInfo>) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        items(conversations) { conversation ->
+            Column {
+                Text(conversation.userName)
+            }
+        }
+    }
 }
 
-@Parcelize
-data class ConversationInfo(
-    val userName: String,
-    val userId: String,
-    val lastSeen: String,
-    val lastMessage: String?
-) : Parcelable
-
-sealed class ConversationsState : Parcelable {
-
-    @Parcelize
-    object Loading : ConversationsState()
-
-    @Parcelize
-    data class Content(
-        val conversations: ConversationInfo
-    ) : ConversationsState()
-
+@Composable
+private fun ConversationsLoading() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.align(Alignment.Center)
+        )
+    }
 }
