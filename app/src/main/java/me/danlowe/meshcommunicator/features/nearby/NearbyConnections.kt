@@ -19,6 +19,7 @@ import me.danlowe.meshcommunicator.features.dispatchers.buildHandledIoContext
 import me.danlowe.meshcommunicator.features.nearby.data.EndpointId
 import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
 import me.danlowe.meshcommunicator.features.nearby.data.NearbyMessageType
+import me.danlowe.meshcommunicator.features.nearby.data.toByteArray
 import me.danlowe.meshcommunicator.util.ext.toHexString
 import timber.log.Timber
 import java.time.Instant
@@ -37,7 +38,8 @@ class NearbyConnections(
 
     private val dbContext = dispatchers.buildHandledIoContext { }
 
-    var localUserName: String = ""
+    private var localUserName: String = ""
+    private var localUserId: String = ""
 
     private val _activeConnections = hashMapOf<ExternalUserId, EndpointId>()
 
@@ -49,7 +51,8 @@ class NearbyConnections(
     init {
         scope.launch(dispatchers.io) {
             appSettings.data.collect {
-                localUserName = it.userId
+                localUserName = it.userName
+                localUserId = it.userId
                 // TODO need to detect change and update connections accordingly
             }
         }
@@ -117,7 +120,17 @@ class NearbyConnections(
             endpointId: String,
             connectionResolution: ConnectionResolution
         ) {
-            // TODO determine need
+            when (connectionResolution.status.statusCode) {
+                ConnectionsStatusCodes.SUCCESS -> {
+                    val namePayload = Payload.fromBytes(
+                        NearbyMessageType.Name(
+                            originUserId = localUserId,
+                            name = localUserName
+                        ).toByteArray()
+                    )
+                    nearbyClient.sendPayload(endpointId, namePayload)
+                }
+            }
         }
 
         override fun onDisconnected(endpointId: String) {
@@ -155,6 +168,7 @@ class NearbyConnections(
     fun stop() {
         stopAdvertising()
         stopDiscovery()
+        nearbyClient.stopAllEndpoints()
     }
 
 
@@ -198,7 +212,7 @@ class NearbyConnections(
     }
 
     private fun removeConnection(endpointId: EndpointId) {
-        val connection = _activeConnections.firstNotNullOf { entry ->
+        val connection = _activeConnections.firstNotNullOfOrNull { entry ->
             if (entry.value == endpointId) {
                 entry.key
             } else {
