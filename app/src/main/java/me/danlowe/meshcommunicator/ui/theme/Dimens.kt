@@ -6,4 +6,8 @@ object Dimens {
 
     val BaseHorizontalSpace = 16.dp
 
+    val BaseItemSeparation = 8.dp
+
+    val BaseTopBottomPadding = 8.dp
+
 }

@@ -226,7 +226,7 @@ class NearbyConnections(
     private suspend fun handleName(type: NearbyMessageType.Name) {
         val contact = contactsDao.getByUserId(type.originUserId)
 
-        val lastSeen = Instant.now().epochSecond
+        val lastSeen = Instant.now().toEpochMilli()
 
         if (contact == null) {
             val dto = ContactDto(
@@ -258,7 +258,7 @@ class NearbyConnections(
         messagesDao.insert(dto)
 
         contactsDao.getByUserId(type.originUserId)?.copy(
-            lastSeen = Instant.now().epochSecond
+            lastSeen = Instant.now().toEpochMilli()
         )?.also { contact ->
             contactsDao.updateContact(contact)
         }
