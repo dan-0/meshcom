@@ -1,51 +1,128 @@
+@file:OptIn(ExperimentalPermissionsApi::class)
+
 package me.danlowe.meshcommunicator.ui.screen.conversations
 
-import android.os.Parcelable
+import android.Manifest
+import android.os.Build
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.Button
+import androidx.compose.material.Card
+import androidx.compose.material.CircularProgressIndicator
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.Flow
-import kotlinx.parcelize.Parcelize
-import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
-import me.danlowe.meshcommunicator.util.ext.getMutableStateFlow
-import javax.inject.Inject
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.MultiplePermissionsState
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import me.danlowe.meshcommunicator.R
+import me.danlowe.meshcommunicator.ui.theme.Dimens
 
 @Composable
 fun ConversationsScreen() {
 
-}
+    val dangerousPermissions = listOf(Manifest.permission.ACCESS_FINE_LOCATION).let {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            it + listOf(
+                Manifest.permission.BLUETOOTH_ADVERTISE,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.BLUETOOTH_SCAN,
+            )
+        } else {
+            it
+        }
+    }
 
-@HiltViewModel
-class ConversationsViewModel @Inject constructor(
-    dispatcherProvider: DispatcherProvider,
-    savedStateHandle: SavedStateHandle,
-) : ViewModel() {
-
-    private val _state = savedStateHandle.getMutableStateFlow<ConversationsState>(
-        key = "ConversationsViewModelState",
-        defaultValue = ConversationsState.Loading
+    val permissions = rememberMultiplePermissionsState(
+        permissions = dangerousPermissions
     )
-    val state: Flow<ConversationsState> = _state
 
+    if (permissions.allPermissionsGranted) {
+        ConversationScreenView()
+    } else {
+        PermissionScreen(permissions)
+    }
 }
 
-@Parcelize
-data class ConversationInfo(
-    val userName: String,
-    val userId: String,
-    val lastSeen: String,
-    val lastMessage: String?
-) : Parcelable
+@Composable
+private fun PermissionScreen(permissions: MultiplePermissionsState) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(Dimens.BaseItemSeparation)
+    ) {
+        Text(
+            text = stringResource(R.string.prompt_permissions),
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        Text(stringResource(R.string.permission_text_location))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Text(stringResource(R.string.permission_text_bt_advertise))
+            Text(stringResource(R.string.permission_text_bt_connect))
+            Text(stringResource(R.string.permission_text_bt_scan))
+        }
+        // TODO list revoked permissions that need manual remediation
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = {
+                permissions.launchMultiplePermissionRequest()
+            }
+        ) {
+            Text(stringResource(R.string.btn_text_request_permissions))
+        }
 
-sealed class ConversationsState : Parcelable {
+    }
+}
 
-    @Parcelize
-    object Loading : ConversationsState()
+@Composable
+private fun ConversationScreenView(
+    viewModel: ConversationsViewModel = hiltViewModel()
+) {
+    when (val state = viewModel.state.collectAsState(initial = ConversationsState.Loading).value) {
+        is ConversationsState.Content -> ConversationsList(state.conversations)
+        ConversationsState.Loading -> ConversationsLoading()
+    }
+}
 
-    @Parcelize
-    data class Content(
-        val conversations: ConversationInfo
-    ) : ConversationsState()
+@Composable
+private fun ConversationsList(conversations: List<ConversationInfo>) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(
+                horizontal = Dimens.BaseHorizontalSpace,
+                vertical = Dimens.BaseTopBottomPadding
+            ),
+        verticalArrangement = Arrangement.spacedBy(Dimens.BaseItemSeparation)
+    ) {
+        items(conversations) { conversation ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = 2.dp
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(stringResource(R.string.label_prefix_username) + conversation.userName)
+                    Text(stringResource(R.string.label_prefix_last_seen) + conversation.lastSeen)
+                }
+            }
+        }
+    }
+}
 
+@Composable
+private fun ConversationsLoading() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.align(Alignment.Center)
+        )
+    }
 }

@@ -87,8 +87,11 @@ dependencies {
     debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_version"
     implementation "androidx.activity:activity-compose:1.5.1"
 
-    // compose navigation
+    // Compose navigation
     implementation "androidx.navigation:navigation-compose:2.5.1"
+
+    // Permissions
+    implementation "com.google.accompanist:accompanist-permissions:0.25.0"
 
     // Core
     implementation "androidx.core:core-ktx:1.8.0"

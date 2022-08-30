@@ -8,6 +8,8 @@ import kotlinx.serialization.decodeFromByteArray
 import kotlinx.serialization.encodeToByteArray
 import kotlinx.serialization.protobuf.ProtoBuf
 import me.danlowe.meshcommunicator.util.ext.toByteArray
+import me.danlowe.meshcommunicator.util.ext.toHexString
+import timber.log.Timber
 import java.nio.ByteBuffer
 
 /**
@@ -48,8 +50,11 @@ sealed class NearbyMessageType {
             val buffer = ByteBuffer.wrap(bytes)
             val messageTypeCode = TypeCode.fromCode(buffer.int)
 
-            val dataArray = ByteArray(bytes.size - Int.SIZE_BYTES)
-            buffer.get(dataArray, Int.SIZE_BYTES, bytes.lastIndex)
+            Timber.d("Full array ${bytes.toHexString()}")
+
+            val dataArray = bytes.copyOfRange(Int.SIZE_BYTES, bytes.lastIndex + 1)
+
+            Timber.d("Data array: ${dataArray.toHexString()}")
 
             return when (messageTypeCode) {
                 TypeCode.NAME -> {
@@ -96,4 +101,8 @@ sealed class NearbyMessageType {
         }
     }
 
+}
+
+fun NearbyMessageType.toByteArray(): ByteArray {
+    return NearbyMessageType.toByteArray(this)
 }

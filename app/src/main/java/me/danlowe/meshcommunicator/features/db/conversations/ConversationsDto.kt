@@ -13,4 +13,6 @@ data class ContactDto(
     val userName: String,
     @ColumnInfo(name = "userId")
     val userId: String,
+    @ColumnInfo(name = "lastSeen")
+    val lastSeen: Long
 )
