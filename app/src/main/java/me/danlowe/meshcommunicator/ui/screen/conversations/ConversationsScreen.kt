@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 @Composable
@@ -41,30 +42,35 @@ fun ConversationsScreen() {
     if (permissions.allPermissionsGranted) {
         ConversationScreenView()
     } else {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = "Before using MeshCommunicator we require the following permissions in order to communicate with other devices:",
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-            Text("Fine Location")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                Text("Bluetooth Advertise")
-                Text("Bluetooth Connect")
-                Text("Bluetooth Scan")
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = {
-                    permissions.launchMultiplePermissionRequest()
-                }
-            ) {
-                Text("Request permissions")
-            }
+        PermissionScreen(permissions)
+    }
+}
 
+@Composable
+private fun PermissionScreen(permissions: MultiplePermissionsState) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(
+            text = "Before using MeshCommunicator we require the following permissions in order to communicate with other devices:",
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        Text("Fine Location")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            Text("Bluetooth Advertise")
+            Text("Bluetooth Connect")
+            Text("Bluetooth Scan")
         }
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(
+            onClick = {
+                permissions.launchMultiplePermissionRequest()
+            }
+        ) {
+            Text("Request permissions")
+        }
+
     }
 }
 
