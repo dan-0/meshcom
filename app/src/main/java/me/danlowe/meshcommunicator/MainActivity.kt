@@ -23,6 +23,8 @@ import me.danlowe.meshcommunicator.nav.AppDestinations
 import me.danlowe.meshcommunicator.ui.screen.conversations.ConversationsScreen
 import me.danlowe.meshcommunicator.ui.screen.signin.SignInScreen
 import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInNavEvent
+import me.danlowe.meshcommunicator.ui.screen.splash.SplashScreen
+import me.danlowe.meshcommunicator.ui.screen.splash.data.SplashNavEvent
 import me.danlowe.meshcommunicator.ui.theme.MeshCommunicatorTheme
 
 @AndroidEntryPoint
@@ -40,11 +42,11 @@ class MainActivity : ComponentActivity() {
     private fun App() {
 
         val navController = rememberNavController()
-        
+
         val title = rememberSaveable {
             mutableStateOf("")
         }
-        
+
         val updateTitle = { newTitle: String ->
             title.value = newTitle
         }
@@ -60,9 +62,29 @@ class MainActivity : ComponentActivity() {
             ) { innerPadding ->
                 NavHost(
                     navController = navController,
-                    startDestination = AppDestinations.SignIn.routeTemplate,
+                    startDestination = AppDestinations.Splash.routeTemplate,
                     modifier = Modifier.padding(innerPadding)
                 ) {
+
+                    composableDestination(AppDestinations.Splash) { _, destination ->
+
+                        updateTitle(stringResource(destination.title))
+
+                        SplashScreen { navEvent ->
+                            val newDestination = when (navEvent) {
+                                SplashNavEvent.HasCredentials -> {
+                                    AppDestinations.Conversations.routeTemplate
+                                }
+                                SplashNavEvent.NoCredentials -> {
+                                    AppDestinations.SignIn.routeTemplate
+                                }
+                            }
+
+                            navController.navigate(newDestination) {
+                                popUpTo(0)
+                            }
+                        }
+                    }
 
                     composableDestination(AppDestinations.SignIn) { _, destination ->
 
