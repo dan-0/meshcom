@@ -9,7 +9,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
 import androidx.compose.material.Card
-import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -22,6 +21,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import me.danlowe.meshcommunicator.R
+import me.danlowe.meshcommunicator.ui.screen.loading.FullLoadingScreen
 import me.danlowe.meshcommunicator.ui.theme.Dimens
 
 @Composable
@@ -85,7 +85,7 @@ private fun ConversationScreenView(
 ) {
     when (val state = viewModel.state.collectAsState(initial = ConversationsState.Loading).value) {
         is ConversationsState.Content -> ConversationsList(state.conversations)
-        ConversationsState.Loading -> ConversationsLoading()
+        ConversationsState.Loading -> FullLoadingScreen()
     }
 }
 
@@ -116,13 +116,3 @@ private fun ConversationsList(conversations: List<ConversationInfo>) {
     }
 }
 
-@Composable
-private fun ConversationsLoading() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        CircularProgressIndicator(
-            modifier = Modifier.align(Alignment.Center)
-        )
-    }
-}

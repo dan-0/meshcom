@@ -13,4 +13,5 @@
     <string name="btn_text_request_permissions">Request permissions</string>
     <string name="label_prefix_username">Username:&#160;</string>
     <string name="label_prefix_last_seen">Last seen:&#160;</string>
+    <string name="splash">Splash</string>
 </resources>

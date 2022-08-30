@@ -20,4 +20,9 @@ sealed class AppDestinations(
         R.string.conversations
     )
 
+    object Splash : AppDestinations(
+        "Splash",
+        R.string.splash
+    )
+
 }
