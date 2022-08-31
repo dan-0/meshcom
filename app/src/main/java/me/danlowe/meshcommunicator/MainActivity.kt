@@ -21,8 +21,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import me.danlowe.meshcommunicator.nav.AppDestinations
-import me.danlowe.meshcommunicator.ui.screen.PermissionsNavEvent
-import me.danlowe.meshcommunicator.ui.screen.PermissionsScreen
+import me.danlowe.meshcommunicator.ui.screen.permissions.PermissionsNavEvent
+import me.danlowe.meshcommunicator.ui.screen.permissions.PermissionsScreen
 import me.danlowe.meshcommunicator.ui.screen.conversations.ConversationsScreen
 import me.danlowe.meshcommunicator.ui.screen.signin.SignInScreen
 import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInNavEvent

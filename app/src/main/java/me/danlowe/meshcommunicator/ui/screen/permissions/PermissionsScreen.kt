@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalPermissionsApi::class)
 
-package me.danlowe.meshcommunicator.ui.screen
+package me.danlowe.meshcommunicator.ui.screen.permissions
 
 import android.Manifest
 import android.os.Build

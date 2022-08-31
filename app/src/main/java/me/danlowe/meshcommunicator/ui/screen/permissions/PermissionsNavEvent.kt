@@ -1,4 +1,4 @@
-package me.danlowe.meshcommunicator.ui.screen
+package me.danlowe.meshcommunicator.ui.screen.permissions
 
 sealed class PermissionsNavEvent {
 
