@@ -8,6 +8,7 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
@@ -20,12 +21,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import me.danlowe.meshcommunicator.nav.AppDestinations
+import me.danlowe.meshcommunicator.ui.screen.PermissionsNavEvent
+import me.danlowe.meshcommunicator.ui.screen.PermissionsScreen
 import me.danlowe.meshcommunicator.ui.screen.conversations.ConversationsScreen
 import me.danlowe.meshcommunicator.ui.screen.signin.SignInScreen
 import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInNavEvent
 import me.danlowe.meshcommunicator.ui.screen.splash.SplashScreen
 import me.danlowe.meshcommunicator.ui.screen.splash.data.SplashNavEvent
 import me.danlowe.meshcommunicator.ui.theme.MeshCommunicatorTheme
+import timber.log.Timber
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -48,6 +52,7 @@ class MainActivity : ComponentActivity() {
         }
 
         val updateTitle = { newTitle: String ->
+            Timber.d("New title $newTitle")
             title.value = newTitle
         }
 
@@ -73,7 +78,7 @@ class MainActivity : ComponentActivity() {
                         SplashScreen { navEvent ->
                             val newDestination = when (navEvent) {
                                 SplashNavEvent.HasCredentials -> {
-                                    AppDestinations.Conversations.routeTemplate
+                                    AppDestinations.NearbyPermissions.routeTemplate
                                 }
                                 SplashNavEvent.NoCredentials -> {
                                     AppDestinations.SignIn.routeTemplate
@@ -94,7 +99,24 @@ class MainActivity : ComponentActivity() {
                             when (navEvent) {
                                 SignInNavEvent.Complete -> {
                                     navController.navigate(
-                                        AppDestinations.Conversations.routeTemplate,
+                                        AppDestinations.NearbyPermissions.routeTemplate,
+                                    ) {
+                                        popUpTo(0)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    composableDestination(AppDestinations.NearbyPermissions) { _, destination ->
+
+                        updateTitle(stringResource(destination.title))
+
+                        PermissionsScreen { navEvent ->
+                            when (navEvent) {
+                                PermissionsNavEvent.PermissionsGranted -> {
+                                    navController.navigate(
+                                        AppDestinations.Conversations.routeTemplate
                                     ) {
                                         popUpTo(0)
                                     }
@@ -117,6 +139,7 @@ class MainActivity : ComponentActivity() {
 
     }
 
+    @Stable
     private fun <T : AppDestinations> NavGraphBuilder.composableDestination(
         destination: T,
         content: @Composable (backStackEntry: NavBackStackEntry, destination: T) -> Unit

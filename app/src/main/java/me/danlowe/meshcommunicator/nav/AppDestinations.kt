@@ -12,17 +12,22 @@ sealed class AppDestinations(
 
     object SignIn : AppDestinations(
         "SignIn",
-        R.string.sign_in
+        R.string.title_sign_in
     )
 
     object Conversations : AppDestinations(
         "Conversations",
-        R.string.conversations
+        R.string.title_conversations
     )
 
     object Splash : AppDestinations(
         "Splash",
-        R.string.splash
+        R.string.title_splash
+    )
+
+    object NearbyPermissions : AppDestinations(
+        "NearbyPermissions",
+        R.string.title_nearby_permissions
     )
 
 }

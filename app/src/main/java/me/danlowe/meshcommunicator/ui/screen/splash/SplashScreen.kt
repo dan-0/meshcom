@@ -8,12 +8,15 @@ import me.danlowe.meshcommunicator.ui.screen.loading.FullLoadingScreen
 import me.danlowe.meshcommunicator.ui.screen.splash.data.SplashEvent
 import me.danlowe.meshcommunicator.ui.screen.splash.data.SplashNavEvent
 import me.danlowe.meshcommunicator.ui.screen.splash.data.SplashState
+import timber.log.Timber
 
 @Composable
 fun SplashScreen(
     viewModel: SplashViewModel = hiltViewModel(),
     navHandler: (SplashNavEvent) -> Unit
 ) {
+
+    Timber.d("Splash")
     LaunchedEffect(key1 = Unit) {
 
         viewModel.event.collect { event ->
