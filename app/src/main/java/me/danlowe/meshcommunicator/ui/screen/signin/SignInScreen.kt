@@ -155,12 +155,11 @@ private fun SignInButton(
     ) {
 
         StandardButton(
-            onClick = {
-                keyboardController?.hide()
-                viewModel.signIn(userNameValue.value.text)
-            },
             buttonText = R.string.btn_text_sign_in
-        )
+        ) {
+            keyboardController?.hide()
+            viewModel.signIn(userNameValue.value.text)
+        }
     }
 }
 

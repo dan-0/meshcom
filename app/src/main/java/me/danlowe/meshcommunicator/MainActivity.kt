@@ -143,10 +143,9 @@ class MainActivity : ComponentActivity() {
 
                     }
 
-                    composableDestination(AppDestinations.Conversation) { backStackEntry, destination ->
-                        ConversationScreen(
-                            externalUserId = destination.itemIdFromNav(backStackEntry)
-                        )
+                    composableDestination(AppDestinations.Conversation) { _, destination ->
+                        updateTitle(stringResource(destination.title))
+                        ConversationScreen()
                     }
 
                 }
