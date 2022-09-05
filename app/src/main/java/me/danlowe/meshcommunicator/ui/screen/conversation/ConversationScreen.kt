@@ -3,6 +3,7 @@ package me.danlowe.meshcommunicator.ui.screen.conversation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.Divider
 import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
@@ -13,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.Dimension
 import androidx.hilt.navigation.compose.hiltViewModel
 import me.danlowe.meshcommunicator.R
 import me.danlowe.meshcommunicator.ui.button.StandardButton
@@ -44,24 +46,49 @@ private fun ConversationContent(
     sendMessage: (String) -> Unit,
     content: ConversationState.Content
 ) {
-    Column(
+    ConstraintLayout(
         modifier = Modifier
-            .fillMaxHeight()
-            .padding(horizontal = Dimens.BaseHorizontalSpace)
+            .fillMaxSize()
     ) {
 
+        val (messages, divider, sendBox) = createRefs()
+
         LazyColumn(
+            modifier = Modifier
+                .constrainAs(messages) {
+                    top.linkTo(parent.top)
+                    end.linkTo(parent.end)
+                    start.linkTo(parent.start)
+                    bottom.linkTo(sendBox.top)
+                    height = Dimension.fillToConstraints
+                    width = Dimension.fillToConstraints
+                }
         ) {
             items(content.messages) { messageData ->
                 Message(messageData)
             }
         }
 
-        Spacer(
-            modifier = Modifier.weight(.7f)
+        Divider(
+            modifier = Modifier
+                .constrainAs(divider) {
+                    top.linkTo(messages.bottom)
+                    end.linkTo(parent.end)
+                    start.linkTo(parent.start)
+                    bottom.linkTo(sendBox.top)
+                }
         )
 
-        SendMessageBox(sendMessage)
+        SendMessageBox(
+            sendMessage = sendMessage,
+            modifier = Modifier
+                .constrainAs(sendBox) {
+                    end.linkTo(parent.end)
+                    start.linkTo(parent.start)
+                    bottom.linkTo(parent.bottom)
+                    top.linkTo(divider.bottom)
+                }
+        )
 
     }
 }
@@ -80,7 +107,8 @@ private fun Message(
 
 @Composable
 private fun SendMessageBox(
-    sendMessage: (String) -> Unit
+    sendMessage: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
 
     val sendMessageText = rememberSaveable(stateSaver = TextFieldValue.Saver) {
@@ -88,7 +116,7 @@ private fun SendMessageBox(
     }
 
     ConstraintLayout(
-        modifier = Modifier
+        modifier = modifier
             .padding(Dimens.BasePadding)
             .height(IntrinsicSize.Min)
     ) {
@@ -96,13 +124,12 @@ private fun SendMessageBox(
         val (messageField, sendButton) = createRefs()
 
         OutlinedTextField(
-            modifier = Modifier.
-                constrainAs(messageField) {
-                    top.linkTo(parent.top)
-                    end.linkTo(sendButton.start)
-                    start.linkTo(parent.start)
-                    bottom.linkTo(parent.bottom)
-                },
+            modifier = Modifier.constrainAs(messageField) {
+                top.linkTo(parent.top)
+                end.linkTo(sendButton.start)
+                start.linkTo(parent.start)
+                bottom.linkTo(parent.bottom)
+            },
             maxLines = 3,
             value = sendMessageText.value,
             onValueChange = { newValue: TextFieldValue ->
