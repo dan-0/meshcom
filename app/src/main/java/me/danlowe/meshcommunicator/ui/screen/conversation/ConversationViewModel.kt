@@ -13,9 +13,11 @@ import me.danlowe.meshcommunicator.features.dispatchers.buildHandledIoContext
 import me.danlowe.meshcommunicator.features.nearby.NearbyConnections
 import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
 import me.danlowe.meshcommunicator.nav.AppDestinations
+import me.danlowe.meshcommunicator.util.ext.asMilliToInstant
 import me.danlowe.meshcommunicator.util.ext.getMutableStateFlow
 import me.danlowe.meshcommunicator.util.ext.launchInContext
 import me.danlowe.meshcommunicator.util.ext.toIso8601String
+import me.danlowe.meshcommunicator.util.helper.time.TimeFormatter
 import timber.log.Timber
 import java.util.*
 import javax.inject.Inject
@@ -27,6 +29,7 @@ class ConversationViewModel @Inject constructor(
     private val messagesDao: MessagesDao,
     private val nearbyConnections: NearbyConnections,
     private val appSettings: DataStore<AppSettings>,
+    private val timeFormatter: TimeFormatter
 ) : ViewModel() {
 
     private val externalUserId = savedStateHandle.get<String>(
@@ -55,11 +58,14 @@ class ConversationViewModel @Inject constructor(
             val settings = appSettings.data.first()
 
             messagesDao.getAllAsFlow().collect { messages ->
+
                 val messageData = messages.map { dto ->
                     MessageData(
                         originUserId = ExternalUserId(dto.originUserId),
                         message = dto.message,
-                        timeSent = dto.timeSent.toIso8601String(),
+                        timeSent = timeFormatter.instantToMediumLocalizedDateTime(
+                            dto.timeSent.asMilliToInstant()
+                        ),
                         timeReceived = dto.timeReceived.toIso8601String(),
                         isFromLocalUser = settings.userId == dto.originUserId
                     )

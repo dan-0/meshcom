@@ -17,10 +17,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -29,6 +31,9 @@ import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
 import me.danlowe.meshcommunicator.ui.button.StandardButton
 import me.danlowe.meshcommunicator.ui.screen.loading.FullLoadingScreen
 import me.danlowe.meshcommunicator.ui.theme.Dimens
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 @Composable
 fun ConversationScreen(
@@ -37,7 +42,8 @@ fun ConversationScreen(
 
     val listState = rememberLazyListState()
 
-    when (val viewState = viewModel.state.collectAsState(initial = ConversationState.Loading).value) {
+    when (val viewState =
+        viewModel.state.collectAsState(initial = ConversationState.Loading).value) {
         is ConversationState.Content -> {
             ConversationContent(
                 viewModel::sendMessage,
@@ -121,48 +127,60 @@ private fun ConversationContent(
 
 @Composable
 private fun MessageToUser(messageData: MessageData) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Start
+        horizontalAlignment = Alignment.Start
     ) {
-        Card(
-            shape = RoundedCornerShape(Dimens.MessageCornerRounding)
-        ) {
-            Column(
-                modifier = Modifier
-                    .background(MaterialTheme.colors.secondary)
-                    .padding(Dimens.MessagePadding),
-            ) {
-                Text(
-                    text = messageData.message,
-                    color = MaterialTheme.colors.onSecondary
-                )
-            }
-        }
+        MessageText(
+            text = messageData.message,
+            textColor = MaterialTheme.colors.onSecondary,
+            backgroundColor = MaterialTheme.colors.secondary
+        )
+        MessageTimeText(messageData)
     }
 }
 
 @Composable
 private fun MessageFromUser(messageData: MessageData) {
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End
+        horizontalAlignment = Alignment.End
     ) {
-        Card(
-            shape = RoundedCornerShape(Dimens.MessageCornerRounding)
-        ) {
-            Column(
-                modifier = Modifier
-                    .background(MaterialTheme.colors.primary)
-                    .padding(Dimens.MessagePadding)
-            ) {
-                Text(
-                    text = messageData.message,
-                    color = MaterialTheme.colors.onPrimary
-                )
-            }
-        }
+        MessageText(
+            text = messageData.message,
+            textColor = MaterialTheme.colors.onPrimary,
+            backgroundColor = MaterialTheme.colors.primary
+        )
+        MessageTimeText(messageData)
     }
+}
+
+@Composable
+private fun MessageText(
+    text: String,
+    textColor: Color,
+    backgroundColor: Color
+) {
+    Card(
+        shape = RoundedCornerShape(Dimens.MessageCornerRounding)
+    ) {
+        Text(
+            text = text,
+            color = textColor,
+            modifier = Modifier
+                .background(backgroundColor)
+                .padding(Dimens.MessagePadding),
+        )
+    }
+}
+
+@Composable
+private fun MessageTimeText(messageData: MessageData) {
+    Text(
+        text = messageData.timeSent,
+        style = MaterialTheme.typography.caption,
+        fontSize = 10.sp
+    )
 }
 
 @Composable
@@ -221,6 +239,12 @@ private fun SendMessageBox(
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 private fun ConversationScreenPreview() {
+
+    val dateTimeFormatter = DateTimeFormatter.ofLocalizedDateTime(
+        FormatStyle.MEDIUM,
+        FormatStyle.MEDIUM
+    )
+
     ConversationContent(
         sendMessage = {},
         content = ConversationState.Content(
@@ -228,14 +252,14 @@ private fun ConversationScreenPreview() {
                 MessageData(
                     originUserId = ExternalUserId(id = "123"),
                     message = "Hello to user",
-                    timeSent = "today",
+                    timeSent = LocalDateTime.of(2022, 3, 3, 14, 21, 22).format(dateTimeFormatter),
                     timeReceived = "yesterday",
                     isFromLocalUser = false
                 ),
                 MessageData(
                     originUserId = ExternalUserId(id = "1234"),
                     message = "Hello from user",
-                    timeSent = "today",
+                    timeSent = LocalDateTime.of(2022, 3, 3, 15, 21, 22).format(dateTimeFormatter),
                     timeReceived = "yesterday",
                     isFromLocalUser = true
                 )
