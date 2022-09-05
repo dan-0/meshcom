@@ -1,4 +1,4 @@
-package me.danlowe.meshcommunicator.ui.screen.conversations
+package me.danlowe.meshcommunicator.ui.screen.conversations.data
 
 import android.os.Parcelable
 import kotlinx.parcelize.Parcelize

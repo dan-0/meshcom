@@ -21,9 +21,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import me.danlowe.meshcommunicator.nav.AppDestinations
+import me.danlowe.meshcommunicator.ui.screen.conversation.ConversationScreen
+import me.danlowe.meshcommunicator.ui.screen.conversations.ConversationsScreen
+import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationsNavEvent
 import me.danlowe.meshcommunicator.ui.screen.permissions.PermissionsNavEvent
 import me.danlowe.meshcommunicator.ui.screen.permissions.PermissionsScreen
-import me.danlowe.meshcommunicator.ui.screen.conversations.ConversationsScreen
 import me.danlowe.meshcommunicator.ui.screen.signin.SignInScreen
 import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInNavEvent
 import me.danlowe.meshcommunicator.ui.screen.splash.SplashScreen
@@ -129,8 +131,22 @@ class MainActivity : ComponentActivity() {
 
                         updateTitle(stringResource(destination.title))
 
-                        ConversationsScreen()
+                        ConversationsScreen { navEvent ->
+                            when (navEvent) {
+                                is ConversationsNavEvent.OpenConversation -> {
+                                    navController.navigate(
+                                        AppDestinations.Conversation.buildRoute(navEvent.externalUserId)
+                                    )
+                                }
+                            }
+                        }
 
+                    }
+
+                    composableDestination(AppDestinations.Conversation) { backStackEntry, destination ->
+                        ConversationScreen(
+                            externalUserId = destination.itemIdFromNav(backStackEntry)
+                        )
                     }
 
                 }

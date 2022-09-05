@@ -2,6 +2,7 @@
 
 package me.danlowe.meshcommunicator.ui.screen.conversations
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,21 +16,29 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import me.danlowe.meshcommunicator.R
+import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
+import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationInfo
+import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationsNavEvent
+import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationsState
 import me.danlowe.meshcommunicator.ui.screen.loading.FullLoadingScreen
 import me.danlowe.meshcommunicator.ui.theme.Dimens
 
 @Composable
 fun ConversationsScreen(
-    viewModel: ConversationsViewModel = hiltViewModel()
+    viewModel: ConversationsViewModel = hiltViewModel(),
+    navHandler: (ConversationsNavEvent) -> Unit
 ) {
     when (val state = viewModel.state.collectAsState(initial = ConversationsState.Loading).value) {
-        is ConversationsState.Content -> ConversationsList(state.conversations)
+        is ConversationsState.Content -> ConversationsList(state.conversations, navHandler)
         ConversationsState.Loading -> FullLoadingScreen()
     }
 }
 
 @Composable
-private fun ConversationsList(conversations: List<ConversationInfo>) {
+private fun ConversationsList(
+    conversations: List<ConversationInfo>,
+    navHandler: (ConversationsNavEvent) -> Unit
+) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -41,8 +50,16 @@ private fun ConversationsList(conversations: List<ConversationInfo>) {
     ) {
         items(conversations) { conversation ->
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = 2.dp
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        navHandler(
+                            ConversationsNavEvent.OpenConversation(
+                                ExternalUserId(conversation.userId)
+                            )
+                        )
+                    },
+                elevation = 2.dp,
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth()
