@@ -3,13 +3,17 @@ package me.danlowe.meshcommunicator.ui.screen.conversation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,11 +31,16 @@ fun ConversationScreen(
     viewModel: ConversationViewModel = hiltViewModel(),
 ) {
 
-    when (val state = viewModel.state.collectAsState(initial = ConversationState.Loading).value) {
-        is ConversationState.Content -> ConversationContent(
-            viewModel::sendMessage,
-            state
-        )
+    val listState = rememberLazyListState()
+
+    when (val viewState = viewModel.state.collectAsState(initial = ConversationState.Loading).value) {
+        is ConversationState.Content -> {
+            ConversationContent(
+                viewModel::sendMessage,
+                viewState,
+                listState
+            )
+        }
         ConversationState.Error -> {
             // TODO make a real error view
             Text("Error")
@@ -45,18 +54,20 @@ fun ConversationScreen(
 @Composable
 private fun ConversationContent(
     sendMessage: (String) -> Unit,
-    content: ConversationState.Content
+    content: ConversationState.Content,
+    listState: LazyListState
 ) {
+
     ConstraintLayout(
         modifier = Modifier
             .fillMaxSize()
     ) {
 
-        val (messages, divider, sendBox) = createRefs()
+        val (messagesView, divider, sendBox) = createRefs()
 
         LazyColumn(
             modifier = Modifier
-                .constrainAs(messages) {
+                .constrainAs(messagesView) {
                     top.linkTo(parent.top)
                     end.linkTo(parent.end)
                     start.linkTo(parent.start)
@@ -65,7 +76,8 @@ private fun ConversationContent(
                     width = Dimension.matchParent
                 }
                 .padding(Dimens.BasePadding),
-            verticalArrangement = Arrangement.spacedBy(Dimens.BaseItemSeparation)
+            state = listState,
+            verticalArrangement = Arrangement.spacedBy(Dimens.BaseItemSeparation),
         ) {
             items(content.messages) { messageData ->
                 if (messageData.isFromLocalUser) {
@@ -79,7 +91,7 @@ private fun ConversationContent(
         Divider(
             modifier = Modifier
                 .constrainAs(divider) {
-                    top.linkTo(messages.bottom)
+                    top.linkTo(messagesView.bottom)
                     end.linkTo(parent.end)
                     start.linkTo(parent.start)
                     bottom.linkTo(sendBox.top)
@@ -96,7 +108,10 @@ private fun ConversationContent(
                     top.linkTo(divider.bottom)
                 }
         )
+    }
 
+    LaunchedEffect(content.messages.size) {
+        listState.scrollToItem(content.messages.lastIndex)
     }
 }
 
@@ -156,21 +171,15 @@ private fun SendMessageBox(
         mutableStateOf(TextFieldValue(""))
     }
 
-    ConstraintLayout(
+    Row(
         modifier = modifier
-            .padding(Dimens.BasePadding)
-            .height(IntrinsicSize.Min)
+            .padding(Dimens.BasePadding),
+        horizontalArrangement = Arrangement.spacedBy(Dimens.BaseItemSeparation),
+        verticalAlignment = Alignment.Bottom
     ) {
 
-        val (messageField, sendButton) = createRefs()
-
         OutlinedTextField(
-            modifier = Modifier.constrainAs(messageField) {
-                top.linkTo(parent.top)
-                end.linkTo(sendButton.start)
-                start.linkTo(parent.start)
-                bottom.linkTo(parent.bottom)
-            },
+            modifier = Modifier.weight(1f),
             maxLines = 3,
             value = sendMessageText.value,
             onValueChange = { newValue: TextFieldValue ->
@@ -179,12 +188,6 @@ private fun SendMessageBox(
         )
 
         StandardButton(
-            modifier = Modifier
-                .constrainAs(sendButton) {
-                    end.linkTo(parent.end)
-                    start.linkTo(messageField.end, margin = Dimens.BaseItemSeparation)
-                    bottom.linkTo(parent.bottom)
-                },
             buttonText = R.string.btn_text_send
         ) {
             sendMessage(sendMessageText.value.text)
@@ -217,6 +220,7 @@ private fun ConversationScreenPreview() {
                     isFromLocalUser = true
                 )
             )
-        )
+        ),
+        rememberLazyListState()
     )
 }
