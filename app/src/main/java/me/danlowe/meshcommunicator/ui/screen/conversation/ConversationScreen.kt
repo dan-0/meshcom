@@ -1,11 +1,11 @@
 package me.danlowe.meshcommunicator.ui.screen.conversation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.Divider
-import androidx.compose.material.OutlinedTextField
-import androidx.compose.material.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
@@ -17,6 +17,7 @@ import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.constraintlayout.compose.Dimension
 import androidx.hilt.navigation.compose.hiltViewModel
 import me.danlowe.meshcommunicator.R
+import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
 import me.danlowe.meshcommunicator.ui.button.StandardButton
 import me.danlowe.meshcommunicator.ui.screen.loading.FullLoadingScreen
 import me.danlowe.meshcommunicator.ui.theme.Dimens
@@ -61,11 +62,17 @@ private fun ConversationContent(
                     start.linkTo(parent.start)
                     bottom.linkTo(sendBox.top)
                     height = Dimension.fillToConstraints
-                    width = Dimension.fillToConstraints
+                    width = Dimension.matchParent
                 }
+                .padding(Dimens.BasePadding),
+            verticalArrangement = Arrangement.spacedBy(Dimens.BaseItemSeparation)
         ) {
             items(content.messages) { messageData ->
-                Message(messageData)
+                if (messageData.isFromLocalUser) {
+                    MessageFromUser(messageData = messageData)
+                } else {
+                    MessageToUser(messageData = messageData)
+                }
             }
         }
 
@@ -94,15 +101,49 @@ private fun ConversationContent(
 }
 
 @Composable
-private fun Message(
-    messageData: MessageData
-) {
-
-    Column {
-        // TODO add more data
-        Text(text = messageData.message)
+private fun MessageToUser(messageData: MessageData) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Card(
+            shape = RoundedCornerShape(Dimens.MessageCornerRounding)
+        ) {
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colors.secondary)
+                    .padding(Dimens.MessagePadding),
+            ) {
+                Text(
+                    text = messageData.message,
+                    color = MaterialTheme.colors.onSecondary
+                )
+            }
+        }
     }
+}
 
+@Composable
+private fun MessageFromUser(messageData: MessageData) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End
+    ) {
+        Card(
+            shape = RoundedCornerShape(Dimens.MessageCornerRounding)
+        ) {
+            Column(
+                modifier = Modifier
+                    .background(MaterialTheme.colors.primary)
+                    .padding(Dimens.MessagePadding)
+            ) {
+                Text(
+                    text = messageData.message,
+                    color = MaterialTheme.colors.onPrimary
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -159,6 +200,23 @@ private fun SendMessageBox(
 private fun ConversationScreenPreview() {
     ConversationContent(
         sendMessage = {},
-        content = ConversationState.Content(listOf())
+        content = ConversationState.Content(
+            listOf(
+                MessageData(
+                    originUserId = ExternalUserId(id = "123"),
+                    message = "Hello to user",
+                    timeSent = "today",
+                    timeReceived = "yesterday",
+                    isFromLocalUser = false
+                ),
+                MessageData(
+                    originUserId = ExternalUserId(id = "1234"),
+                    message = "Hello from user",
+                    timeSent = "today",
+                    timeReceived = "yesterday",
+                    isFromLocalUser = true
+                )
+            )
+        )
     )
 }

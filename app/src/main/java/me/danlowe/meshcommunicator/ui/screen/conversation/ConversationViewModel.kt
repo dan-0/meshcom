@@ -1,9 +1,12 @@
 package me.danlowe.meshcommunicator.ui.screen.conversation
 
+import androidx.datastore.core.DataStore
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import me.danlowe.meshcommunicator.AppSettings
 import me.danlowe.meshcommunicator.features.db.messages.MessagesDao
 import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
 import me.danlowe.meshcommunicator.features.dispatchers.buildHandledIoContext
@@ -23,6 +26,7 @@ class ConversationViewModel @Inject constructor(
     dispatchers: DispatcherProvider,
     private val messagesDao: MessagesDao,
     private val nearbyConnections: NearbyConnections,
+    private val appSettings: DataStore<AppSettings>,
 ) : ViewModel() {
 
     private val externalUserId = savedStateHandle.get<String>(
@@ -47,13 +51,17 @@ class ConversationViewModel @Inject constructor(
 
     init {
         launchInContext(dbContext) {
+
+            val settings = appSettings.data.first()
+
             messagesDao.getAllAsFlow().collect { messages ->
                 val messageData = messages.map { dto ->
                     MessageData(
                         originUserId = ExternalUserId(dto.originUserId),
                         message = dto.message,
                         timeSent = dto.timeSent.toIso8601String(),
-                        timeReceived = dto.timeReceived.toIso8601String()
+                        timeReceived = dto.timeReceived.toIso8601String(),
+                        isFromLocalUser = settings.userId == dto.originUserId
                     )
                 }
 

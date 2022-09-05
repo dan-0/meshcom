@@ -9,5 +9,6 @@ data class MessageData(
     val originUserId: ExternalUserId,
     val message: String,
     val timeSent: String,
-    val timeReceived: String
+    val timeReceived: String,
+    val isFromLocalUser: Boolean,
 ) : Parcelable

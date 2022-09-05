@@ -6,6 +6,10 @@ object Dimens {
 
     val BasePadding = 16.dp
 
+    val MessagePadding = 8.dp
+
+    val MessageCornerRounding = 24.dp
+
     val BaseHorizontalSpace = BasePadding
 
     val BaseVerticalSpace = BasePadding
