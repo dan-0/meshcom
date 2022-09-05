@@ -84,10 +84,10 @@ private fun ConversationContent(
                     bottom.linkTo(sendBox.top)
                     height = Dimension.fillToConstraints
                     width = Dimension.matchParent
-                }
-                .padding(Dimens.BasePadding),
+                },
             state = listState,
             verticalArrangement = Arrangement.spacedBy(Dimens.BaseItemSeparation),
+            contentPadding = PaddingValues(Dimens.BasePadding)
         ) {
             items(content.messages) { messageData ->
                 if (messageData.isFromLocalUser) {
