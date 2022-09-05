@@ -3,10 +3,12 @@
 package me.danlowe.meshcommunicator.ui.screen.signin
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.*
+import androidx.compose.material.Icon
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.runtime.*
@@ -25,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import me.danlowe.meshcommunicator.R
+import me.danlowe.meshcommunicator.ui.button.StandardButton
 import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInEvent
 import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInNavEvent
 import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInState
@@ -59,13 +62,12 @@ fun SignInScreen(
 
     Timber.d("Start sign in: $viewModel, $navEventHandler")
 
-    SignInContent(viewModel, navEventHandler, isValidationError)
+    SignInContent(viewModel, isValidationError)
 }
 
 @Composable
 private fun SignInContent(
     viewModel: SignInViewModel,
-    navEventHandler: (SignInNavEvent) -> Unit,
     isValidationError: Boolean
 ) {
 
@@ -152,14 +154,11 @@ private fun SignInButton(
         horizontalArrangement = Arrangement.End,
     ) {
 
-        Button(
-            onClick = {
-                keyboardController?.hide()
-                viewModel.signIn(userNameValue.value.text)
-            },
-            shape = CutCornerShape(5),
+        StandardButton(
+            buttonText = R.string.btn_text_sign_in
         ) {
-            Text(stringResource(R.string.sign_in_button))
+            keyboardController?.hide()
+            viewModel.signIn(userNameValue.value.text)
         }
     }
 }

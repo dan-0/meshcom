@@ -5,10 +5,9 @@ import com.google.android.gms.nearby.connection.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import me.danlowe.meshcommunicator.AppSettings
 import me.danlowe.meshcommunicator.features.db.conversations.ContactDto
 import me.danlowe.meshcommunicator.features.db.conversations.ContactsDao
@@ -16,13 +15,11 @@ import me.danlowe.meshcommunicator.features.db.messages.MessageDto
 import me.danlowe.meshcommunicator.features.db.messages.MessagesDao
 import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
 import me.danlowe.meshcommunicator.features.dispatchers.buildHandledIoContext
-import me.danlowe.meshcommunicator.features.nearby.data.EndpointId
-import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
-import me.danlowe.meshcommunicator.features.nearby.data.NearbyMessageType
-import me.danlowe.meshcommunicator.features.nearby.data.toByteArray
+import me.danlowe.meshcommunicator.features.nearby.data.*
 import me.danlowe.meshcommunicator.util.ext.toHexString
 import timber.log.Timber
 import java.time.Instant
+import java.util.*
 
 class NearbyConnections(
     dispatchers: DispatcherProvider,
@@ -46,6 +43,8 @@ class NearbyConnections(
     private val _activeConnectionsState = MutableStateFlow(_activeConnections.keys)
     val activeConnectionsState: Flow<Set<ExternalUserId>> = _activeConnectionsState
 
+    private val awaitingMessages = mutableMapOf<Long, MutableStateFlow<AwaitingMessageState>>()
+
     private val payloadBuffer = MutableSharedFlow<ByteArray>(0, 100, BufferOverflow.DROP_OLDEST)
 
     init {
@@ -63,9 +62,11 @@ class NearbyConnections(
 
                 when (type) {
                     is NearbyMessageType.Message -> {
+                        Timber.d("New message")
                         handleMessage(type)
                     }
                     is NearbyMessageType.Name -> {
+                        Timber.d("New name")
                         handleName(type)
                     }
                     is NearbyMessageType.Unknown -> {
@@ -100,7 +101,21 @@ class NearbyConnections(
         }
 
         override fun onPayloadTransferUpdate(endpointId: String, update: PayloadTransferUpdate) {
-            // Nothing to do here
+            val state = awaitingMessages[update.payloadId]
+
+            state?.value = when (update.status) {
+                PayloadTransferUpdate.Status.SUCCESS -> {
+                    AwaitingMessageState.Success
+                }
+                PayloadTransferUpdate.Status.IN_PROGRESS -> {
+                    AwaitingMessageState.Created
+                }
+                PayloadTransferUpdate.Status.CANCELED,
+                PayloadTransferUpdate.Status.FAILURE -> {
+                    AwaitingMessageState.Fail
+                }
+                else -> throw IllegalArgumentException("Received unknown payload status")
+            }
         }
 
     }
@@ -143,7 +158,7 @@ class NearbyConnections(
 
         override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
             nearbyClient
-                .requestConnection(localUserName, endpointId, connectionLifecycleCallback)
+                .requestConnection(localUserId, endpointId, connectionLifecycleCallback)
                 .addOnSuccessListener {
                     // TODO
                     Timber.d("Connection requested successfully")
@@ -160,7 +175,7 @@ class NearbyConnections(
         }
     }
 
-    fun start()  {
+    fun start() {
         startAdvertising()
         startDiscovery()
     }
@@ -171,11 +186,95 @@ class NearbyConnections(
         nearbyClient.stopAllEndpoints()
     }
 
+    suspend fun sendMessage(
+        externalUserId: ExternalUserId,
+        message: String,
+        messageId: UUID
+    ): Flow<NearbyMessageResult> {
+
+        val endpointId = _activeConnections[externalUserId]
+
+        val sendState = if (endpointId == null) {
+            NearbyMessageResult.NoEndpoint
+        } else {
+            NearbyMessageResult.Sending
+        }
+
+        val dto = MessageDto(
+            uuid = messageId.toString(),
+            originUserId = localUserId,
+            message = message,
+            timeSent = Instant.now().toEpochMilli(),
+            timeReceived = -1,
+            sendState = sendState
+        )
+
+        messagesDao.insert(dto)
+
+        val resolvedMessage = messagesDao.getByUuid(messageId.toString())
+
+        return flow {
+            if (sendState is NearbyMessageResult.NoEndpoint) {
+                Timber.d("Attempted to send message to disconnected endpoint")
+                emit(sendState)
+                return@flow
+            }
+
+            val nearbyMessage = NearbyMessageType.Message(
+                uuid = dto.uuid,
+                originUserId = dto.originUserId,
+                message = dto.message,
+                timeSent = dto.timeSent,
+                timeReceived = -1
+            ).toByteArray()
+
+            val payload = Payload.fromBytes(nearbyMessage)
+
+            val awaitingState = MutableStateFlow<AwaitingMessageState>(AwaitingMessageState.Created)
+            awaitingMessages[payload.id] = awaitingState
+
+            /*
+                endpointId should not be null, this is checked prior, resulting in a returned
+                NoEndpoint state
+             */
+            nearbyClient.sendPayload(endpointId!!.id, payload)
+
+            emit(NearbyMessageResult.Sending)
+
+            val result = withTimeoutOrNull(MESSAGE_STATUS_WAIT_TIME) {
+
+                awaitingState.first {
+                    it != AwaitingMessageState.Created
+                }
+
+            }
+
+            Timber.d("Result: $result")
+
+            when (result) {
+                AwaitingMessageState.Success -> emit(NearbyMessageResult.Success)
+                AwaitingMessageState.Fail,
+                AwaitingMessageState.Created,
+                null -> {
+                    emit(NearbyMessageResult.Error)
+                }
+            }
+
+            awaitingMessages.remove(payload.id)
+        }.onEach { messageResult ->
+            resolvedMessage?.let { resolvedDto ->
+                resolvedDto.copy(sendState = messageResult).also {
+                    messagesDao.update(it)
+                }
+            }
+        }
+
+    }
 
     private fun startAdvertising() {
 
         nearbyClient.startAdvertising(
-            localUserName, SERVICE_ID, connectionLifecycleCallback, advertisingOptions
+            localUserId, SERVICE_ID, connectionLifecycleCallback, advertisingOptions
         )
             .addOnSuccessListener {
                 Timber.d("Advertising started")
@@ -190,7 +289,6 @@ class NearbyConnections(
     }
 
     private fun startDiscovery() {
-
         nearbyClient.startDiscovery(SERVICE_ID, endpointDiscoveryCallback, discoveryOptions)
             .addOnSuccessListener {
                 // TODO
@@ -248,11 +346,11 @@ class NearbyConnections(
     private suspend fun handleMessage(type: NearbyMessageType.Message) {
         val dto = MessageDto(
             uuid = type.uuid,
-            conversationId = type.conversationId,
             originUserId = type.originUserId,
             message = type.message,
             timeSent = type.timeSent,
-            timeReceived = type.timeReceived
+            timeReceived = type.timeReceived,
+            sendState = NearbyMessageResult.None
         )
 
         messagesDao.insert(dto)
@@ -267,6 +365,18 @@ class NearbyConnections(
     companion object {
 
         private const val SERVICE_ID = "me.danlowe.meshcommunicator"
+
+        private const val MESSAGE_STATUS_WAIT_TIME = 5_000L
+
+    }
+
+    private sealed class AwaitingMessageState {
+
+        object Created : AwaitingMessageState()
+
+        object Success : AwaitingMessageState()
+
+        object Fail : AwaitingMessageState()
 
     }
 

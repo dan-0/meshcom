@@ -11,6 +11,8 @@ import me.danlowe.meshcommunicator.features.db.conversations.ContactsDao
 import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
 import me.danlowe.meshcommunicator.features.dispatchers.buildHandledIoContext
 import me.danlowe.meshcommunicator.features.nearby.NearbyConnections
+import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationInfo
+import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationsState
 import me.danlowe.meshcommunicator.util.ext.getMutableStateFlow
 import java.time.Instant
 import javax.inject.Inject

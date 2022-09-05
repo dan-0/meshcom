@@ -32,7 +32,6 @@ sealed class NearbyMessageType {
     @Serializable
     data class Message(
         val uuid: String,
-        val conversationId: String,
         val originUserId: String,
         val message: String,
         val timeSent: Long,

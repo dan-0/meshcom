@@ -8,7 +8,7 @@
     <string name="title_nearby_permissions">Nearby Permissions</string>
 
     <string name="username">Username</string>
-    <string name="sign_in_button">Sign In</string>
+    <string name="btn_text_sign_in">Sign In</string>
     <string name="username_error">Username must be between 5 and 55 characters</string>
     <string name="prompt_permissions">Before using MeshCommunicator we require the following permissions in order to communicate with other devices:</string>
     <string name="permission_text_location">Fine Location</string>
@@ -18,4 +18,6 @@
     <string name="btn_text_request_permissions">Request permissions</string>
     <string name="label_prefix_username">Username:&#160;</string>
     <string name="label_prefix_last_seen">Last seen:&#160;</string>
+    <string name="title_conversation">Conversation</string>
+    <string name="btn_text_send">Send</string>
 </resources>
