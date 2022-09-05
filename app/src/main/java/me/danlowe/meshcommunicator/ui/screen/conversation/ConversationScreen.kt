@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,6 +17,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -184,12 +188,28 @@ private fun SendMessageBox(
             value = sendMessageText.value,
             onValueChange = { newValue: TextFieldValue ->
                 sendMessageText.value = newValue
-            }
+            },
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Sentences,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    if (sendMessageText.value.text.isEmpty()) {
+                        return@KeyboardActions
+                    }
+                    sendMessage(sendMessageText.value.text)
+                    sendMessageText.value = TextFieldValue("")
+                }
+            )
         )
 
         StandardButton(
             buttonText = R.string.btn_text_send
         ) {
+            if (sendMessageText.value.text.isEmpty()) {
+                return@StandardButton
+            }
             sendMessage(sendMessageText.value.text)
             sendMessageText.value = TextFieldValue("")
         }
