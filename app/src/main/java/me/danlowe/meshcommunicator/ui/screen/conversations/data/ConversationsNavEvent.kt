@@ -5,6 +5,7 @@ import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
 sealed class ConversationsNavEvent {
 
     data class OpenConversation(
+        val userName: String,
         val externalUserId: ExternalUserId
     ) : ConversationsNavEvent()
 

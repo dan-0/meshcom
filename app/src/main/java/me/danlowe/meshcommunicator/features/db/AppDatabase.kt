@@ -12,7 +12,7 @@ import me.danlowe.meshcommunicator.features.db.messages.MessagesDao
         ContactDto::class,
         MessageDto::class
     ],
-    version = 4
+    version = 5
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun contactsDao(): ContactsDao

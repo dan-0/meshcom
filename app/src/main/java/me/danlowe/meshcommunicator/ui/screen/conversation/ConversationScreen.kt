@@ -121,7 +121,9 @@ private fun ConversationContent(
     }
 
     LaunchedEffect(content.messages.size) {
-        listState.scrollToItem(content.messages.lastIndex)
+        if (content.messages.isNotEmpty()) {
+            listState.scrollToItem(content.messages.lastIndex)
+        }
     }
 }
 

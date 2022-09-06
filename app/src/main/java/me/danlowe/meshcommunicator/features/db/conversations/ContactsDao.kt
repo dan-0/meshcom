@@ -18,7 +18,7 @@ interface ContactsDao {
     @Query("SELECT * FROM contacts")
     fun getAllAsFlow(): Flow<List<ContactDto>>
 
-    @Query("SELECT * FROM contacts WHERE userId = :userId")
+    @Query("SELECT * FROM contacts WHERE externalUserId = :userId")
     suspend fun getByUserId(userId: String): ContactDto?
 
     @Update

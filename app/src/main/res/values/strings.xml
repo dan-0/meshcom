@@ -16,7 +16,6 @@
     <string name="permission_text_bt_connect">Bluetooth Connect</string>
     <string name="permission_text_bt_scan">Bluetooth Scan</string>
     <string name="btn_text_request_permissions">Request permissions</string>
-    <string name="label_prefix_username">Username:&#160;</string>
     <string name="label_prefix_last_seen">Last seen:&#160;</string>
     <string name="title_conversation">Conversation</string>
     <string name="btn_text_send">Send</string>
