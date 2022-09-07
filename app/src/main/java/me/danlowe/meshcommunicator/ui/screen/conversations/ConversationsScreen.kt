@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalPermissionsApi::class)
-
 package me.danlowe.meshcommunicator.ui.screen.conversations
 
 import androidx.compose.foundation.background
@@ -21,7 +19,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
 import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationConnectionState
 import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationInfo
