@@ -21,7 +21,7 @@ import timber.log.Timber
 import java.time.Instant
 import java.util.*
 
-class NearbyConnections(
+class AppConnections(
     dispatchers: DispatcherProvider,
     private val nearbyClient: ConnectionsClient,
     private val appSettings: DataStore<AppSettings>,
@@ -166,8 +166,11 @@ class NearbyConnections(
             nearbyClient
                 .requestConnection(localUserId, endpointId, connectionLifecycleCallback)
                 .addOnSuccessListener {
-                    // TODO
                     Timber.d("Connection requested successfully")
+                    activeConnections.addConnection(
+                        endpointId = EndpointId(endpointId),
+                        externalUserId = ExternalUserId(info.endpointName)
+                    )
                 }
                 .addOnFailureListener {
                     // TODO

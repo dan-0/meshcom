@@ -17,12 +17,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import me.danlowe.meshcommunicator.R
 import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
 import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationConnectionState
 import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationInfo
@@ -67,53 +66,84 @@ private fun ConversationItem(
     navHandler: (ConversationsNavEvent) -> Unit,
     conversation: ConversationInfo
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                navHandler(
-                    ConversationsNavEvent.OpenConversation(
-                        userName = conversation.userName,
-                        externalUserId = ExternalUserId(conversation.userId),
-                    )
-                )
-            },
-        elevation = 2.dp,
-    ) {
-        Row(
+    ConstraintLayout {
+        val (conversationCard, connectionIndicator) = createRefs()
+
+        Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(Dimens.BasePadding)
-                .height(IntrinsicSize.Max),
+                .constrainAs(conversationCard) {
+                    top.linkTo(parent.top)
+                    end.linkTo(parent.end)
+                    bottom.linkTo(parent.bottom)
+                    start.linkTo(parent.start)
+                }
+                .clickable {
+                    navHandler(
+                        ConversationsNavEvent.OpenConversation(
+                            userName = conversation.userName,
+                            externalUserId = ExternalUserId(conversation.userId),
+                        )
+                    )
+                },
+            elevation = 2.dp,
         ) {
-
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
+                modifier = Modifier.padding(Dimens.BasePadding),
+                verticalArrangement = Arrangement.spacedBy(Dimens.BaseItemSeparation)
             ) {
-                Text(conversation.userName)
-                Text(stringResource(R.string.label_prefix_last_seen) + conversation.lastSeen)
-            }
-
-            val backgroundColor = when (conversation.connectionState) {
-                ConversationConnectionState.Connected -> Color.Green
-                ConversationConnectionState.NotConnected -> Color.LightGray
-            }
-
-            Column(
-                modifier = Modifier.fillMaxHeight(),
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Box(
+                Row(
                     modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(backgroundColor)
-                        .border(1.dp, MaterialTheme.colors.primaryVariant, CircleShape),
-                )
+                        .fillMaxWidth(),
+                ) {
+                    Text(
+                        text = conversation.userName,
+                        maxLines = 1,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.body1
+                    )
+                    Text(
+                        text = conversation.lastSeen,
+                        style = MaterialTheme.typography.caption
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                ) {
+                    conversation.lastMessage?.let { lastMessage ->
+                        Text(
+                            text = "\"$lastMessage\"",
+                            style = MaterialTheme.typography.body2
+                        )
+                    }
+                }
             }
+
+
         }
+
+        val backgroundColor = when (conversation.connectionState) {
+            ConversationConnectionState.Connected -> Color.Green
+            ConversationConnectionState.NotConnected -> Color.LightGray
+        }
+
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(backgroundColor)
+                .border(1.dp, MaterialTheme.colors.primaryVariant, CircleShape)
+                .constrainAs(connectionIndicator) {
+                    top.linkTo(conversationCard.top)
+                    bottom.linkTo(conversationCard.top)
+                    end.linkTo(
+                        conversationCard.end,
+                        margin = Dimens.BaseVerticalSpace / 2
+                    )
+                },
+        )
+
     }
 }
 
@@ -126,7 +156,7 @@ private fun ConversationItemPreview() {
         ConversationInfo(
             userName = "Bob",
             userId = "sa4 aserAuserId",
-            lastSeen = "now",
+            lastSeen = "Aug 31, 2022 13:45",
             connectionState = ConversationConnectionState.Connected,
             lastMessage = "Hello"
         )

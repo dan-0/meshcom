@@ -27,4 +27,12 @@ interface MessagesDao {
     @Query("SELECT * FROM messages where uuid = :messageId")
     suspend fun getByUuid(messageId: String): MessageDto?
 
+    @Query(
+        "SELECT message FROM messages " +
+                "WHERE originUserId = :externalUserId " +
+                "ORDER BY timeSent " +
+                "DESC LIMIT 1"
+    )
+    suspend fun getLastMessageByExternalUserId(externalUserId: String): String?
+
 }
