@@ -182,13 +182,14 @@ class NearbyConnections(
     }
 
     fun start() {
+        stop()
         startAdvertising()
         startDiscovery()
     }
 
     fun stop() {
-        stopAdvertising()
-        stopDiscovery()
+        nearbyClient.stopAdvertising()
+        nearbyClient.stopDiscovery()
         nearbyClient.stopAllEndpoints()
         activeConnections.clear()
     }
@@ -291,10 +292,6 @@ class NearbyConnections(
             }
     }
 
-    private fun stopAdvertising() {
-        nearbyClient.stopAdvertising()
-    }
-
     private fun startDiscovery() {
         nearbyClient.startDiscovery(SERVICE_ID, endpointDiscoveryCallback, discoveryOptions)
             .addOnSuccessListener {
@@ -305,10 +302,6 @@ class NearbyConnections(
                 // TODO
                 Timber.w(it, "Discovery failed")
             }
-    }
-
-    private fun stopDiscovery() {
-        nearbyClient.stopDiscovery()
     }
 
     private suspend fun handleName(type: NearbyMessageType.Name) {
