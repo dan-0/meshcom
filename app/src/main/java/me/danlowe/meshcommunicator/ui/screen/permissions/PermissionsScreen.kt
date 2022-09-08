@@ -41,7 +41,7 @@ fun PermissionsScreen(
     )
 
     if (permissions.allPermissionsGranted) {
-        LaunchedEffect(Unit) {
+        LaunchedEffect(permissions.allPermissionsGranted) {
             navHandler(PermissionsNavEvent.PermissionsGranted)
         }
     } else {

@@ -135,7 +135,10 @@ class MainActivity : ComponentActivity() {
                             when (navEvent) {
                                 is ConversationsNavEvent.OpenConversation -> {
                                     navController.navigate(
-                                        AppDestinations.Conversation.buildRoute(navEvent.externalUserId)
+                                        AppDestinations.Conversation.buildRoute(
+                                            externalUserId = navEvent.externalUserId,
+                                            userName = navEvent.userName
+                                        )
                                     )
                                 }
                             }
@@ -143,8 +146,9 @@ class MainActivity : ComponentActivity() {
 
                     }
 
-                    composableDestination(AppDestinations.Conversation) { _, destination ->
-                        updateTitle(stringResource(destination.title))
+                    composableDestination(AppDestinations.Conversation) { backStack, destination ->
+                        val userName = AppDestinations.Conversation.userNameFromBackstack(backStack)
+                        updateTitle(userName)
                         ConversationScreen()
                     }
 

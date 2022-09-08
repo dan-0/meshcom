@@ -11,8 +11,8 @@ data class ContactDto(
     val id: Long = 0,
     @ColumnInfo(name = "userName")
     val userName: String,
-    @ColumnInfo(name = "userId")
-    val userId: String,
+    @ColumnInfo(name = "externalUserId")
+    val externalUserId: String,
     @ColumnInfo(name = "lastSeen")
     val lastSeen: Long
 )

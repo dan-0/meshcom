@@ -21,12 +21,13 @@ import timber.log.Timber
 import java.time.Instant
 import java.util.*
 
-class NearbyConnections(
+class AppConnections(
     dispatchers: DispatcherProvider,
     private val nearbyClient: ConnectionsClient,
     private val appSettings: DataStore<AppSettings>,
     private val contactsDao: ContactsDao,
     private val messagesDao: MessagesDao,
+    private val activeConnections: ActiveConnections
 ) {
 
     private val supervisorJob = SupervisorJob()
@@ -38,10 +39,8 @@ class NearbyConnections(
     private var localUserName: String = ""
     private var localUserId: String = ""
 
-    private val _activeConnections = hashMapOf<ExternalUserId, EndpointId>()
-
-    private val _activeConnectionsState = MutableStateFlow(_activeConnections.keys)
-    val activeConnectionsState: Flow<Set<ExternalUserId>> = _activeConnectionsState
+    val activeConnectionsState: StateFlow<Set<ExternalUserId>>
+        get() = activeConnections.state
 
     private val awaitingMessages = mutableMapOf<Long, MutableStateFlow<AwaitingMessageState>>()
 
@@ -128,15 +127,19 @@ class NearbyConnections(
 
             val endpoint = EndpointId(endpointId)
             val userId = ExternalUserId(connectionInfo.endpointName)
-            addConnection(endpoint, userId)
+
+            activeConnections.addConnection(endpoint, userId)
         }
 
         override fun onConnectionResult(
             endpointId: String,
             connectionResolution: ConnectionResolution
         ) {
+            Timber.d("Connection result: $endpointId ${connectionResolution.status}")
+
             when (connectionResolution.status.statusCode) {
                 ConnectionsStatusCodes.SUCCESS -> {
+
                     val namePayload = Payload.fromBytes(
                         NearbyMessageType.Name(
                             originUserId = localUserId,
@@ -145,12 +148,15 @@ class NearbyConnections(
                     )
                     nearbyClient.sendPayload(endpointId, namePayload)
                 }
+                ConnectionsStatusCodes.STATUS_CONNECTION_REJECTED -> {
+                    activeConnections.removeConnection(EndpointId(endpointId))
+                }
             }
         }
 
         override fun onDisconnected(endpointId: String) {
             val endpoint = EndpointId(endpointId)
-            removeConnection(endpoint)
+            activeConnections.removeConnection(endpoint)
         }
     }
 
@@ -160,8 +166,11 @@ class NearbyConnections(
             nearbyClient
                 .requestConnection(localUserId, endpointId, connectionLifecycleCallback)
                 .addOnSuccessListener {
-                    // TODO
                     Timber.d("Connection requested successfully")
+                    activeConnections.addConnection(
+                        endpointId = EndpointId(endpointId),
+                        externalUserId = ExternalUserId(info.endpointName)
+                    )
                 }
                 .addOnFailureListener {
                     // TODO
@@ -171,19 +180,21 @@ class NearbyConnections(
 
         override fun onEndpointLost(endpointId: String) {
             val endpoint = EndpointId(endpointId)
-            removeConnection(endpoint)
+            activeConnections.removeConnection(endpoint)
         }
     }
 
     fun start() {
+        stop()
         startAdvertising()
         startDiscovery()
     }
 
     fun stop() {
-        stopAdvertising()
-        stopDiscovery()
+        nearbyClient.stopAdvertising()
+        nearbyClient.stopDiscovery()
         nearbyClient.stopAllEndpoints()
+        activeConnections.clear()
     }
 
     suspend fun sendMessage(
@@ -192,7 +203,7 @@ class NearbyConnections(
         messageId: UUID
     ): Flow<NearbyMessageResult> {
 
-        val endpointId = _activeConnections[externalUserId]
+        val endpointId = activeConnections[externalUserId]
 
         val sendState = if (endpointId == null) {
             NearbyMessageResult.NoEndpoint
@@ -284,10 +295,6 @@ class NearbyConnections(
             }
     }
 
-    private fun stopAdvertising() {
-        nearbyClient.stopAdvertising()
-    }
-
     private fun startDiscovery() {
         nearbyClient.startDiscovery(SERVICE_ID, endpointDiscoveryCallback, discoveryOptions)
             .addOnSuccessListener {
@@ -300,27 +307,6 @@ class NearbyConnections(
             }
     }
 
-    private fun stopDiscovery() {
-        nearbyClient.stopDiscovery()
-    }
-
-    private fun addConnection(endpointId: EndpointId, externalUserId: ExternalUserId) {
-        _activeConnections[externalUserId] = endpointId
-        _activeConnectionsState.value = _activeConnections.keys
-    }
-
-    private fun removeConnection(endpointId: EndpointId) {
-        val connection = _activeConnections.firstNotNullOfOrNull { entry ->
-            if (entry.value == endpointId) {
-                entry.key
-            } else {
-                null
-            }
-        }
-        _activeConnections.remove(connection)
-        _activeConnectionsState.value = _activeConnections.keys
-    }
-
     private suspend fun handleName(type: NearbyMessageType.Name) {
         val contact = contactsDao.getByUserId(type.originUserId)
 
@@ -329,7 +315,7 @@ class NearbyConnections(
         if (contact == null) {
             val dto = ContactDto(
                 userName = type.name,
-                userId = type.originUserId,
+                externalUserId = type.originUserId,
                 lastSeen = lastSeen
             )
             contactsDao.insert(dto)
@@ -381,4 +367,3 @@ class NearbyConnections(
     }
 
 }
-

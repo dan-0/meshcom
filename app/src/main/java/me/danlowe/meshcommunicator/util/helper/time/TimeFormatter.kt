@@ -20,23 +20,24 @@ class TimeFormatter(
      * Note, this optimizes setting the pattern, but won't update 24 hour time format with
      * context changes while the app is running.
      */
-    private val pattern: String = DateTimeFormatterBuilder.getLocalizedDateTimePattern(
-        FormatStyle.MEDIUM,
-        FormatStyle.MEDIUM,
-        IsoChronology.INSTANCE,
-        Locale.getDefault()
-    ).let { format ->
+    private val formatter: DateTimeFormatter
+        get() = DateTimeFormatterBuilder.getLocalizedDateTimePattern(
+            FormatStyle.MEDIUM,
+            FormatStyle.MEDIUM,
+            IsoChronology.INSTANCE,
+            Locale.getDefault()
+        ).let { format ->
 
-        if (DateFormat.is24HourFormat(context)) {
-            format.replace("h", "H")
-                .replace("a", "").trim()
-        } else {
-            format
+            val pattern = if (DateFormat.is24HourFormat(context)) {
+                // remove/replace non-24 hour formatting
+                format.replace("h", "H")
+                    .replace("a", "").trim()
+            } else {
+                format
+            }
+
+            DateTimeFormatter.ofPattern(pattern)
         }
-
-    }
-
-    private val formatter = DateTimeFormatter.ofPattern(pattern)
 
     fun instantToMediumLocalizedDateTime(instant: Instant): String {
         return formatter.format(

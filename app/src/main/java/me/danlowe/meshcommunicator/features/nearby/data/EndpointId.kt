@@ -1,7 +1,7 @@
 package me.danlowe.meshcommunicator.features.nearby.data
 
 /**
- * ID of an external user
+ * The Nearby created endpoint ID of a user
  */
 @JvmInline
 value class EndpointId(val id: String)

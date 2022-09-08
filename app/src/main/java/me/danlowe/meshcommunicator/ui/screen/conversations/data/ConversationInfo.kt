@@ -8,5 +8,6 @@ data class ConversationInfo(
     val userName: String,
     val userId: String,
     val lastSeen: String,
+    val connectionState: ConversationConnectionState,
     val lastMessage: String? = null
 ) : Parcelable

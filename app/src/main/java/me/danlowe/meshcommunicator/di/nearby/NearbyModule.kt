@@ -12,7 +12,8 @@ import dagger.hilt.components.SingletonComponent
 import me.danlowe.meshcommunicator.AppSettings
 import me.danlowe.meshcommunicator.features.db.AppDatabase
 import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
-import me.danlowe.meshcommunicator.features.nearby.NearbyConnections
+import me.danlowe.meshcommunicator.features.nearby.ActiveConnections
+import me.danlowe.meshcommunicator.features.nearby.AppConnections
 import javax.inject.Singleton
 
 @Module
@@ -33,15 +34,23 @@ class NearbyModule {
         dispatchers: DispatcherProvider,
         nearbyClient: ConnectionsClient,
         appSettings: DataStore<AppSettings>,
-        appDatabase: AppDatabase
-    ): NearbyConnections {
-        return NearbyConnections(
+        appDatabase: AppDatabase,
+        activeConnections: ActiveConnections
+    ): AppConnections {
+        return AppConnections(
             dispatchers,
             nearbyClient,
             appSettings,
             appDatabase.contactsDao(),
-            appDatabase.messagesDao()
+            appDatabase.messagesDao(),
+            activeConnections
         )
+    }
+
+    @Provides
+    @Singleton
+    fun provideActiveConnections(): ActiveConnections {
+        return ActiveConnections()
     }
 
 }

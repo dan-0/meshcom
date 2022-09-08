@@ -39,16 +39,22 @@ sealed class AppDestinations(
 
         const val PARAM_EXTERNAL_USER_ID = "PARAM_EXTERNAL_USER_ID"
 
-        override val routeTemplate: String = "$baseRoute/{$PARAM_EXTERNAL_USER_ID}"
+        private const val PARAM_EXTERNAL_USER_NAME = "PARAM_EXTERNAL_USER_NAME"
 
-        fun buildRoute(externalUserId: ExternalUserId): String {
-            return "$baseRoute/${externalUserId.id}"
+        override val routeTemplate: String = "$baseRoute/{$PARAM_EXTERNAL_USER_ID}/{$PARAM_EXTERNAL_USER_NAME}"
+
+        fun buildRoute(externalUserId: ExternalUserId, userName: String): String {
+            return "$baseRoute/${externalUserId.id}/$userName"
         }
 
-        fun itemIdFromNav(backStackEntry: NavBackStackEntry): ExternalUserId {
+        fun externalIdFromBackstack(backStackEntry: NavBackStackEntry): ExternalUserId {
             return ExternalUserId(
                 backStackEntry.arguments!!.getString(PARAM_EXTERNAL_USER_ID)!!
             )
+        }
+
+        fun userNameFromBackstack(backStackEntry: NavBackStackEntry): String {
+            return backStackEntry.arguments!!.getString(PARAM_EXTERNAL_USER_NAME)!!
         }
 
     }
