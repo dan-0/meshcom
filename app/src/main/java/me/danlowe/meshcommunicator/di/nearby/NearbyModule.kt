@@ -13,7 +13,7 @@ import me.danlowe.meshcommunicator.AppSettings
 import me.danlowe.meshcommunicator.features.db.AppDatabase
 import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
 import me.danlowe.meshcommunicator.features.nearby.ActiveConnections
-import me.danlowe.meshcommunicator.features.nearby.AppConnections
+import me.danlowe.meshcommunicator.features.nearby.AppConnectionHandler
 import javax.inject.Singleton
 
 @Module
@@ -36,8 +36,8 @@ class NearbyModule {
         appSettings: DataStore<AppSettings>,
         appDatabase: AppDatabase,
         activeConnections: ActiveConnections
-    ): AppConnections {
-        return AppConnections(
+    ): AppConnectionHandler {
+        return AppConnectionHandler(
             dispatchers,
             nearbyClient,
             appSettings,

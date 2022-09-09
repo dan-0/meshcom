@@ -10,7 +10,7 @@ import me.danlowe.meshcommunicator.AppSettings
 import me.danlowe.meshcommunicator.features.db.messages.MessagesDao
 import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
 import me.danlowe.meshcommunicator.features.dispatchers.buildHandledIoContext
-import me.danlowe.meshcommunicator.features.nearby.AppConnections
+import me.danlowe.meshcommunicator.features.nearby.AppConnectionHandler
 import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
 import me.danlowe.meshcommunicator.nav.AppDestinations
 import me.danlowe.meshcommunicator.util.ext.asMilliToInstant
@@ -27,7 +27,7 @@ class ConversationViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     dispatchers: DispatcherProvider,
     private val messagesDao: MessagesDao,
-    private val appConnections: AppConnections,
+    private val appConnectionHandler: AppConnectionHandler,
     private val appSettings: DataStore<AppSettings>,
     private val timeFormatter: TimeFormatter
 ) : ViewModel() {
@@ -79,7 +79,7 @@ class ConversationViewModel @Inject constructor(
     fun sendMessage(message: String) {
 
         launchInContext(messageContext) {
-            appConnections.sendMessage(
+            appConnectionHandler.sendMessage(
                 externalUserId = externalUserId,
                 message = message,
                 messageId = UUID.randomUUID()

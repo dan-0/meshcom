@@ -21,7 +21,7 @@ import timber.log.Timber
 import java.time.Instant
 import java.util.*
 
-class AppConnections(
+class AppConnectionHandler(
     dispatchers: DispatcherProvider,
     private val nearbyClient: ConnectionsClient,
     private val appSettings: DataStore<AppSettings>,
@@ -39,8 +39,7 @@ class AppConnections(
     private var localUserName: String = ""
     private var localUserId: String = ""
 
-    val activeConnectionsState: StateFlow<Set<ExternalUserId>>
-        get() = activeConnections.state
+    val activeConnectionsState: Flow<Set<ExternalUserId>> = activeConnections.state
 
     private val awaitingMessages = mutableMapOf<Long, MutableStateFlow<AwaitingMessageState>>()
 
@@ -129,6 +128,7 @@ class AppConnections(
             val userId = ExternalUserId(connectionInfo.endpointName)
 
             activeConnections.addConnection(endpoint, userId)
+            Timber.d("connection initiated $endpoint")
         }
 
         override fun onConnectionResult(
@@ -155,6 +155,7 @@ class AppConnections(
         }
 
         override fun onDisconnected(endpointId: String) {
+            Timber.d("Connection disconnected")
             val endpoint = EndpointId(endpointId)
             activeConnections.removeConnection(endpoint)
         }

@@ -4,17 +4,20 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import me.danlowe.meshcommunicator.features.db.conversations.ContactDto
 import me.danlowe.meshcommunicator.features.db.conversations.ContactsDao
 import me.danlowe.meshcommunicator.features.db.messages.MessagesDao
 import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
 import me.danlowe.meshcommunicator.features.dispatchers.buildHandledIoContext
-import me.danlowe.meshcommunicator.features.nearby.AppConnections
+import me.danlowe.meshcommunicator.features.nearby.AppConnectionHandler
 import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
 import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationConnectionState
 import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationInfo
@@ -27,11 +30,11 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ConversationsViewModel @Inject constructor(
-    dispatcherProvider: DispatcherProvider,
+    dispatchers: DispatcherProvider,
     savedStateHandle: SavedStateHandle,
     contactsDao: ContactsDao,
     private val messagesDao: MessagesDao,
-    private val appConnections: AppConnections,
+    private val appConnectionHandler: AppConnectionHandler,
     private val timeFormatter: TimeFormatter,
 ) : ViewModel() {
 
@@ -41,22 +44,25 @@ class ConversationsViewModel @Inject constructor(
     )
     val state: Flow<ConversationsState> = _state
 
-    private val dbContext = dispatcherProvider.buildHandledIoContext {
+    private val dbContext = dispatchers.buildHandledIoContext {
         // TODO handle error
     }
 
     init {
-        appConnections.start()
+        appConnectionHandler.start()
 
         viewModelScope.launch(dbContext) {
-            contactsDao.getAllAsFlow().combine(
-                appConnections.activeConnectionsState,
+            combine(
+                contactsDao.getAllAsFlow(),
+                appConnectionHandler.activeConnectionsState,
             ) { contacts, connectionStates ->
                 mapContactDtoToState(contacts, connectionStates)
-            }.collect { conversations ->
-                Timber.d("collecting")
-                _state.value = ConversationsState.Content(conversations)
             }
+                .stateIn(CoroutineScope(dispatchers.io), SharingStarted.Eagerly, listOf())
+                .collect { conversations ->
+                    Timber.d("collecting")
+                    _state.value = ConversationsState.Content(conversations)
+                }
         }
     }
 
@@ -94,6 +100,6 @@ class ConversationsViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        appConnections.stop()
+        appConnectionHandler.stop()
     }
 }
