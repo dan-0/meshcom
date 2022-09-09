@@ -41,6 +41,10 @@ class ActiveConnections {
         _activeConnectionsState.tryEmit(activeConnections.keys)
     }
 
+    fun isConnectedToEndpoint(endpointId: EndpointId): Boolean {
+        return activeConnections.values.contains(endpointId)
+    }
+
     fun clear() {
         activeConnections.clear()
         _activeConnectionsState.tryEmit(activeConnections.keys)

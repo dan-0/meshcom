@@ -2,12 +2,9 @@ package me.danlowe.meshcommunicator.features.nearby
 
 import androidx.datastore.core.DataStore
 import com.google.android.gms.nearby.connection.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import me.danlowe.meshcommunicator.AppSettings
 import me.danlowe.meshcommunicator.features.db.conversations.ContactDto
 import me.danlowe.meshcommunicator.features.db.conversations.ContactsDao
@@ -20,9 +17,11 @@ import me.danlowe.meshcommunicator.util.ext.toHexString
 import timber.log.Timber
 import java.time.Instant
 import java.util.*
+import kotlin.coroutines.resume
+import kotlin.random.Random
 
 class AppConnectionHandler(
-    dispatchers: DispatcherProvider,
+    private val dispatchers: DispatcherProvider,
     private val nearbyClient: ConnectionsClient,
     private val appSettings: DataStore<AppSettings>,
     private val contactsDao: ContactsDao,
@@ -164,24 +163,54 @@ class AppConnectionHandler(
     private val endpointDiscoveryCallback = object : EndpointDiscoveryCallback() {
 
         override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
-            nearbyClient
-                .requestConnection(localUserId, endpointId, connectionLifecycleCallback)
-                .addOnSuccessListener {
-                    Timber.d("Connection requested successfully")
-                    activeConnections.addConnection(
-                        endpointId = EndpointId(endpointId),
-                        externalUserId = ExternalUserId(info.endpointName)
-                    )
-                }
-                .addOnFailureListener {
-                    // TODO
-                    Timber.w(it, "Connection request failed")
-                }
+            Timber.d("Endpoint found $endpointId")
+            connectToEndpoint(EndpointId(endpointId), ExternalUserId(info.endpointName))
         }
 
         override fun onEndpointLost(endpointId: String) {
+            Timber.d("Endpoint lost $endpointId")
             val endpoint = EndpointId(endpointId)
             activeConnections.removeConnection(endpoint)
+        }
+    }
+
+    private fun connectToEndpoint(
+        endpointId: EndpointId,
+        externalUserId: ExternalUserId
+    ) {
+
+        scope.launch(dispatchers.io) {
+            // This is a a brute force attempt that needs to be improved on
+            withTimeout(10_000) {
+                repeat(3) {
+                    if (activeConnections.isConnectedToEndpoint(endpointId)) {
+                        Timber.d("already connected")
+                        return@withTimeout
+                    }
+                    val isConnected = suspendCancellableCoroutine { continuation ->
+                        nearbyClient
+                            .requestConnection(localUserId, endpointId.id, connectionLifecycleCallback)
+                            .addOnSuccessListener {
+                                Timber.d("Connection requested successfully: $endpointId")
+                                activeConnections.addConnection(
+                                    endpointId = endpointId,
+                                    externalUserId = externalUserId
+                                )
+                                continuation.resume(true)
+                            }
+                            .addOnFailureListener {
+                                Timber.w(it, "Connection request failed $endpointId")
+                                if (!activeConnections.isConnectedToEndpoint(endpointId)) {
+                                    nearbyClient.disconnectFromEndpoint(endpointId.id)
+                                }
+                                continuation.resume(false)
+                            }
+                    }
+
+                    if (isConnected) return@withTimeout
+                    delay(Random.nextLong(500L, 1000L))
+                }
+            }
         }
     }
 
