@@ -20,4 +20,6 @@
     <string name="btn_text_send">Send</string>
     <string name="content_description_item_not_received">Item not received</string>
     <string name="content_description_item_received">Item received</string>
+    <string name="cta_refresh">Refresh</string>
+    <string name="error">Error</string>
 </resources>

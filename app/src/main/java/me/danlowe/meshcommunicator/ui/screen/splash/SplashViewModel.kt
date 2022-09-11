@@ -38,6 +38,10 @@ class SplashViewModel @Inject constructor(
     }
 
     init {
+        loadCredentials()
+    }
+
+    fun loadCredentials() {
         viewModelScope.launch(dataStoreContext) {
 
             val settings = dataStore.data.firstOrNull()

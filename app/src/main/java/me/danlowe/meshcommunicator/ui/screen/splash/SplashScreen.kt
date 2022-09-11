@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.hilt.navigation.compose.hiltViewModel
+import me.danlowe.meshcommunicator.ui.screen.error.BasicErrorView
 import me.danlowe.meshcommunicator.ui.screen.loading.FullLoadingScreen
 import me.danlowe.meshcommunicator.ui.screen.splash.data.SplashEvent
 import me.danlowe.meshcommunicator.ui.screen.splash.data.SplashNavEvent
@@ -32,7 +33,6 @@ fun SplashScreen(
 
     when (viewModel.state.collectAsState(initial = SplashState.Loading).value) {
         SplashState.Loading -> FullLoadingScreen()
-        // TODO replace with error refresh screen when made
-        SplashState.Error -> FullLoadingScreen()
+        SplashState.Error -> BasicErrorView(viewModel::loadCredentials)
     }
 }
