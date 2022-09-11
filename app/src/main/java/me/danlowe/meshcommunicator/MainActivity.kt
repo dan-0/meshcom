@@ -21,7 +21,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import me.danlowe.meshcommunicator.nav.AppDestinations
-import me.danlowe.meshcommunicator.ui.screen.conversation.ConversationScreen
+import me.danlowe.meshcommunicator.ui.screen.chat.ChatScreen
 import me.danlowe.meshcommunicator.ui.screen.conversations.ConversationsScreen
 import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationsNavEvent
 import me.danlowe.meshcommunicator.ui.screen.permissions.PermissionsNavEvent
@@ -149,7 +149,7 @@ class MainActivity : ComponentActivity() {
                     composableDestination(AppDestinations.Conversation) { backStack, destination ->
                         val userName = AppDestinations.Conversation.userNameFromBackstack(backStack)
                         updateTitle(userName)
-                        ConversationScreen()
+                        ChatScreen()
                     }
 
                 }

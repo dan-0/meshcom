@@ -1,4 +1,4 @@
-package me.danlowe.meshcommunicator.ui.screen.conversation
+package me.danlowe.meshcommunicator.ui.screen.chat
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -29,6 +29,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import me.danlowe.meshcommunicator.R
 import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
 import me.danlowe.meshcommunicator.ui.button.StandardButton
+import me.danlowe.meshcommunicator.ui.screen.chat.data.ChatData
+import me.danlowe.meshcommunicator.ui.screen.chat.data.ChatState
 import me.danlowe.meshcommunicator.ui.screen.loading.FullLoadingScreen
 import me.danlowe.meshcommunicator.ui.theme.Dimens
 import java.time.LocalDateTime
@@ -36,35 +38,35 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 @Composable
-fun ConversationScreen(
-    viewModel: ConversationViewModel = hiltViewModel(),
+fun ChatScreen(
+    viewModel: ChatViewModel = hiltViewModel(),
 ) {
 
     val listState = rememberLazyListState()
 
     when (val viewState =
-        viewModel.state.collectAsState(initial = ConversationState.Loading).value) {
-        is ConversationState.Content -> {
-            ConversationContent(
+        viewModel.state.collectAsState(initial = ChatState.Loading).value) {
+        is ChatState.Content -> {
+            ChatContent(
                 viewModel::sendMessage,
                 viewState,
                 listState
             )
         }
-        ConversationState.Error -> {
+        ChatState.Error -> {
             // TODO make a real error view
             Text("Error")
         }
-        ConversationState.Loading -> FullLoadingScreen()
+        ChatState.Loading -> FullLoadingScreen()
     }
 
 
 }
 
 @Composable
-private fun ConversationContent(
+private fun ChatContent(
     sendMessage: (String) -> Unit,
-    content: ConversationState.Content,
+    content: ChatState.Content,
     listState: LazyListState
 ) {
 
@@ -90,10 +92,13 @@ private fun ConversationContent(
             contentPadding = PaddingValues(Dimens.BasePadding)
         ) {
             items(content.messages) { messageData ->
-                if (messageData.isFromLocalUser) {
-                    MessageFromUser(messageData = messageData)
-                } else {
-                    MessageToUser(messageData = messageData)
+                when (messageData) {
+                    is ChatData.ReceivedChat -> {
+                        MessageToUser(messageData)
+                    }
+                    is ChatData.SentChat -> {
+                        MessageFromUser(messageData)
+                    }
                 }
             }
         }
@@ -128,32 +133,32 @@ private fun ConversationContent(
 }
 
 @Composable
-private fun MessageToUser(messageData: MessageData) {
+private fun MessageToUser(chat: ChatData.ReceivedChat) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.Start
     ) {
         MessageText(
-            text = messageData.message,
+            text = chat.message,
             textColor = MaterialTheme.colors.onSecondary,
             backgroundColor = MaterialTheme.colors.secondary
         )
-        MessageTimeText(messageData)
+        MessageTimeText(chat.timeSent)
     }
 }
 
 @Composable
-private fun MessageFromUser(messageData: MessageData) {
+private fun MessageFromUser(chat: ChatData.SentChat) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.End
     ) {
         MessageText(
-            text = messageData.message,
+            text = chat.message,
             textColor = MaterialTheme.colors.onPrimary,
             backgroundColor = MaterialTheme.colors.primary
         )
-        MessageTimeText(messageData)
+        MessageTimeText(chat.timeSent)
     }
 }
 
@@ -177,9 +182,9 @@ private fun MessageText(
 }
 
 @Composable
-private fun MessageTimeText(messageData: MessageData) {
+private fun MessageTimeText(timeSent: String) {
     Text(
-        text = messageData.timeSent,
+        text = timeSent,
         style = MaterialTheme.typography.caption,
         fontSize = 10.sp
     )
@@ -240,30 +245,27 @@ private fun SendMessageBox(
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
-private fun ConversationScreenPreview() {
+private fun ChatScreenPreview() {
 
     val dateTimeFormatter = DateTimeFormatter.ofLocalizedDateTime(
         FormatStyle.MEDIUM,
         FormatStyle.MEDIUM
     )
 
-    ConversationContent(
+    ChatContent(
         sendMessage = {},
-        content = ConversationState.Content(
+        content = ChatState.Content(
             listOf(
-                MessageData(
+                ChatData.ReceivedChat(
                     originUserId = ExternalUserId(id = "123"),
                     message = "Hello to user",
                     timeSent = LocalDateTime.of(2022, 3, 3, 14, 21, 22).format(dateTimeFormatter),
-                    timeReceived = "yesterday",
-                    isFromLocalUser = false
+                    timeReceived = "yesterday"
                 ),
-                MessageData(
-                    originUserId = ExternalUserId(id = "1234"),
+                ChatData.SentChat(
                     message = "Hello from user",
                     timeSent = LocalDateTime.of(2022, 3, 3, 15, 21, 22).format(dateTimeFormatter),
                     timeReceived = "yesterday",
-                    isFromLocalUser = true
                 )
             )
         ),
