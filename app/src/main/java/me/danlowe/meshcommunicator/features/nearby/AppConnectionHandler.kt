@@ -126,7 +126,7 @@ class AppConnectionHandler(
             val endpoint = EndpointId(endpointId)
             val userId = ExternalUserId(connectionInfo.endpointName)
 
-            activeConnections.addConnection(endpoint, userId)
+            handleNewConnection(endpoint, userId)
             Timber.d("connection initiated $endpoint")
         }
 
@@ -138,14 +138,7 @@ class AppConnectionHandler(
 
             when (connectionResolution.status.statusCode) {
                 ConnectionsStatusCodes.SUCCESS -> {
-
-                    val namePayload = Payload.fromBytes(
-                        NearbyMessageType.Name(
-                            originUserId = localUserId,
-                            name = localUserName
-                        ).toByteArray()
-                    )
-                    nearbyClient.sendPayload(endpointId, namePayload)
+                    sendNamePayload(endpointId)
                 }
                 ConnectionsStatusCodes.STATUS_CONNECTION_REJECTED -> {
                     activeConnections.removeConnection(EndpointId(endpointId))
@@ -192,10 +185,7 @@ class AppConnectionHandler(
                             .requestConnection(localUserId, endpointId.id, connectionLifecycleCallback)
                             .addOnSuccessListener {
                                 Timber.d("Connection requested successfully: $endpointId")
-                                activeConnections.addConnection(
-                                    endpointId = endpointId,
-                                    externalUserId = externalUserId
-                                )
+                                handleNewConnection(endpointId, externalUserId)
                                 continuation.resume(true)
                             }
                             .addOnFailureListener {
@@ -214,6 +204,16 @@ class AppConnectionHandler(
         }
     }
 
+    private fun handleNewConnection(
+        endpointId: EndpointId,
+        externalUserId: ExternalUserId
+    ) {
+        activeConnections.addConnection(
+            endpointId = endpointId,
+            externalUserId = externalUserId
+        )
+    }
+
     fun start() {
         stop()
         startAdvertising()
@@ -225,6 +225,16 @@ class AppConnectionHandler(
         nearbyClient.stopDiscovery()
         nearbyClient.stopAllEndpoints()
         activeConnections.clear()
+    }
+
+    private fun sendNamePayload(endpointId: String) {
+        val namePayload = Payload.fromBytes(
+            NearbyMessageType.Name(
+                originUserId = localUserId,
+                name = localUserName
+            ).toByteArray()
+        )
+        nearbyClient.sendPayload(endpointId, namePayload)
     }
 
     suspend fun sendMessage(
@@ -244,6 +254,7 @@ class AppConnectionHandler(
         val dto = MessageDto(
             uuid = messageId.toString(),
             originUserId = localUserId,
+            targetUserId = externalUserId.id,
             message = message,
             timeSent = Instant.now().toEpochMilli(),
             timeReceived = -1,
@@ -261,6 +272,8 @@ class AppConnectionHandler(
                 return@flow
             }
 
+            emit(NearbyMessageResult.Sending)
+
             val nearbyMessage = NearbyMessageType.Message(
                 uuid = dto.uuid,
                 originUserId = dto.originUserId,
@@ -269,26 +282,10 @@ class AppConnectionHandler(
                 timeReceived = -1
             ).toByteArray()
 
+
             val payload = Payload.fromBytes(nearbyMessage)
 
-            val awaitingState = MutableStateFlow<AwaitingMessageState>(AwaitingMessageState.Created)
-            awaitingMessages[payload.id] = awaitingState
-
-            /*
-                endpointId should not be null, this is checked prior, resulting in a returned
-                NoEndpoint state
-             */
-            nearbyClient.sendPayload(endpointId!!.id, payload)
-
-            emit(NearbyMessageResult.Sending)
-
-            val result = withTimeoutOrNull(MESSAGE_STATUS_WAIT_TIME) {
-
-                awaitingState.first {
-                    it != AwaitingMessageState.Created
-                }
-
-            }
+            val result = sendPayloadForResult(payload, endpointId!!)
 
             Timber.d("Result: $result")
 
@@ -357,12 +354,79 @@ class AppConnectionHandler(
                 )
             )
         }
+
+        sendUnsentMessages(ExternalUserId(type.originUserId))
+    }
+
+    private fun sendUnsentMessages(
+        externalUserId: ExternalUserId
+    ) {
+        val endpointId = activeConnections.getEndpoint(externalUserId)
+
+        endpointId ?: run {
+            Timber.w("Tried to send unsent messages to unknown endpoint for $externalUserId")
+            return
+        }
+
+        scope.launch(dbContext) {
+            val messages = messagesDao.getUnsentMessagesFromUser(externalUserId.id)
+            Timber.d("Unread messages $messages")
+            messages.forEach { dto ->
+                launch {
+                    val nearbyMessage = NearbyMessageType.Message(
+                        uuid = dto.uuid,
+                        originUserId = dto.originUserId,
+                        message = dto.message,
+                        timeSent = dto.timeSent,
+                        timeReceived = -1
+                    ).toByteArray()
+
+                    val payload = Payload.fromBytes(nearbyMessage)
+
+                    val resultingDto = when (sendPayloadForResult(payload, endpointId)) {
+                        AwaitingMessageState.Success -> {
+                            dto.copy(
+                                sendState = NearbyMessageResult.Success,
+                                timeReceived = Instant.now().toEpochMilli()
+                            )
+                        }
+                        AwaitingMessageState.Fail,
+                        AwaitingMessageState.Created,
+                        null -> {
+                            dto.copy(
+                                sendState = NearbyMessageResult.Error
+                            )
+                        }
+                    }
+
+                    messagesDao.update(resultingDto)
+                }
+            }
+        }
+    }
+
+    private suspend fun sendPayloadForResult(
+        payload: Payload,
+        endpointId: EndpointId
+    ): AwaitingMessageState? {
+        val awaitingState = MutableStateFlow<AwaitingMessageState>(AwaitingMessageState.Created)
+        awaitingMessages[payload.id] = awaitingState
+
+        nearbyClient.sendPayload(endpointId.id, payload)
+
+        val result = withTimeoutOrNull(MESSAGE_STATUS_WAIT_TIME) {
+            awaitingState.first {
+                it != AwaitingMessageState.Created
+            }
+        }
+        return result
     }
 
     private suspend fun handleMessage(type: NearbyMessageType.Message) {
         val dto = MessageDto(
             uuid = type.uuid,
             originUserId = type.originUserId,
+            targetUserId = localUserId,
             message = type.message,
             timeSent = type.timeSent,
             timeReceived = type.timeReceived,

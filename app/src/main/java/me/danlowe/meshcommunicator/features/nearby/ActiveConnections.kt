@@ -22,10 +22,16 @@ class ActiveConnections {
         _activeConnectionsState.tryEmit(setOf())
     }
 
-    fun addConnection(endpointId: EndpointId, externalUserId: ExternalUserId) {
+    /**
+     * Adds the given connection with [endpointId] and [externalUserId]. Returns true if the user
+     * was added for the first time, false if the connection is already present
+     */
+    fun addConnection(endpointId: EndpointId, externalUserId: ExternalUserId): Boolean {
         Timber.d("Adding connection $endpointId")
+        val hasUserId = activeConnections.contains(externalUserId)
         activeConnections[externalUserId] = endpointId
         _activeConnectionsState.tryEmit(activeConnections.keys)
+        return !hasUserId
     }
 
     fun removeConnection(endpointId: EndpointId) {
@@ -39,6 +45,10 @@ class ActiveConnections {
         }
         activeConnections.remove(connection)
         _activeConnectionsState.tryEmit(activeConnections.keys)
+    }
+
+    fun getEndpoint(externalUserId: ExternalUserId): EndpointId? {
+        return activeConnections[externalUserId]
     }
 
     fun isConnectedToEndpoint(endpointId: EndpointId): Boolean {

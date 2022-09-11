@@ -1,9 +1,6 @@
 package me.danlowe.meshcommunicator.features.db.messages
 
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.Query
-import androidx.room.Update
+import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -18,7 +15,7 @@ interface MessagesDao {
     @Query("SELECT * FROM messages")
     fun getAllAsFlow(): Flow<List<MessageDto>>
 
-    @Insert
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(messageDto: MessageDto)
 
     @Update
@@ -34,5 +31,13 @@ interface MessagesDao {
                 "DESC LIMIT 1"
     )
     suspend fun getLastMessageByExternalUserId(externalUserId: String): String?
+
+    @Query(
+        "SELECT * from messages " +
+                "WHERE targetUserId = :externalUserId " +
+                "AND sendState != 3"
+
+    )
+    suspend fun getUnsentMessagesFromUser(externalUserId: String): List<MessageDto>
 
 }
