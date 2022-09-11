@@ -298,7 +298,6 @@ class AppConnectionHandler(
                 }
             }
 
-            awaitingMessages.remove(payload.id)
         }.onEach { messageResult ->
             resolvedMessage?.let { resolvedDto ->
                 resolvedDto.copy(sendState = messageResult).also {
@@ -424,6 +423,9 @@ class AppConnectionHandler(
                 it != AwaitingMessageState.Created
             }
         }
+
+        awaitingMessages.remove(payload.id)
+
         return result
     }
 
