@@ -43,6 +43,7 @@ class SplashViewModel @Inject constructor(
 
     fun loadCredentials() {
         viewModelScope.launch(dataStoreContext) {
+            _state.value = SplashState.Loading
 
             val settings = dataStore.data.firstOrNull()
 
