@@ -257,7 +257,7 @@ class AppConnectionHandler(
             targetUserId = externalUserId.id,
             message = message,
             timeSent = Instant.now().toEpochMilli(),
-            timeReceived = -1,
+            timeReceived = MessageDto.NO_RECEIVED_TIME,
             sendState = sendState
         )
 
@@ -278,8 +278,7 @@ class AppConnectionHandler(
                 uuid = dto.uuid,
                 originUserId = dto.originUserId,
                 message = dto.message,
-                timeSent = dto.timeSent,
-                timeReceived = -1
+                timeSent = dto.timeSent
             ).toByteArray()
 
 
@@ -395,7 +394,6 @@ class AppConnectionHandler(
                         originUserId = dto.originUserId,
                         message = dto.message,
                         timeSent = dto.timeSent,
-                        timeReceived = -1
                     ).toByteArray()
 
                     val payload = Payload.fromBytes(nearbyMessage)
@@ -449,7 +447,7 @@ class AppConnectionHandler(
             targetUserId = localUserId,
             message = type.message,
             timeSent = type.timeSent,
-            timeReceived = type.timeReceived,
+            timeReceived = Instant.now().toEpochMilli(),
             sendState = NearbyMessageResult.None
         )
 

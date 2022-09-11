@@ -28,4 +28,12 @@ data class MessageDto(
     val timeReceived: Long,
     @ColumnInfo(name = "sendState")
     val sendState: NearbyMessageResult,
-)
+) {
+
+    companion object {
+
+        const val NO_RECEIVED_TIME = -1L
+
+    }
+
+}
