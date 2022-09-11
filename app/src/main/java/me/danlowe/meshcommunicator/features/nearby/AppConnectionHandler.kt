@@ -355,6 +355,11 @@ class AppConnectionHandler(
             )
         }
 
+        /*
+         * Sending here as a "name" is sent by the other client whenever we successfully establish
+         * a connection. A name means we're past the initialization of the connection and have
+         * up to date information on the other client.
+         */
         sendUnsentMessages(ExternalUserId(type.originUserId))
     }
 
