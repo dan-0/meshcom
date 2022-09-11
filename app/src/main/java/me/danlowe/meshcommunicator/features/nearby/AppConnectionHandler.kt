@@ -1,32 +1,46 @@
 package me.danlowe.meshcommunicator.features.nearby
 
-import androidx.datastore.core.DataStore
-import com.google.android.gms.nearby.connection.*
-import kotlinx.coroutines.*
+import com.google.android.gms.nearby.connection.AdvertisingOptions
+import com.google.android.gms.nearby.connection.ConnectionInfo
+import com.google.android.gms.nearby.connection.ConnectionLifecycleCallback
+import com.google.android.gms.nearby.connection.ConnectionResolution
+import com.google.android.gms.nearby.connection.ConnectionsClient
+import com.google.android.gms.nearby.connection.ConnectionsStatusCodes
+import com.google.android.gms.nearby.connection.DiscoveredEndpointInfo
+import com.google.android.gms.nearby.connection.DiscoveryOptions
+import com.google.android.gms.nearby.connection.EndpointDiscoveryCallback
+import com.google.android.gms.nearby.connection.Payload
+import com.google.android.gms.nearby.connection.PayloadCallback
+import com.google.android.gms.nearby.connection.PayloadTransferUpdate
+import com.google.android.gms.nearby.connection.Strategy
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.*
-import me.danlowe.meshcommunicator.AppSettings
-import me.danlowe.meshcommunicator.features.db.conversations.ContactDto
-import me.danlowe.meshcommunicator.features.db.conversations.ContactsDao
-import me.danlowe.meshcommunicator.features.db.messages.MessageDto
-import me.danlowe.meshcommunicator.features.db.messages.MessagesDao
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeout
+import me.danlowe.meshcommunicator.features.appsettings.LiveAppSettings
 import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
 import me.danlowe.meshcommunicator.features.dispatchers.buildHandledIoContext
-import me.danlowe.meshcommunicator.features.nearby.data.*
-import me.danlowe.meshcommunicator.util.ext.toHexString
+import me.danlowe.meshcommunicator.features.nearby.data.EndpointId
+import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
+import me.danlowe.meshcommunicator.features.nearby.data.NearbyMessageResult
+import me.danlowe.meshcommunicator.features.nearby.data.NearbyMessageType
+import me.danlowe.meshcommunicator.features.nearby.data.toByteArray
 import timber.log.Timber
-import java.time.Instant
-import java.util.*
+import java.util.UUID
 import kotlin.coroutines.resume
 import kotlin.random.Random
 
 class AppConnectionHandler(
     private val dispatchers: DispatcherProvider,
     private val nearbyClient: ConnectionsClient,
-    private val appSettings: DataStore<AppSettings>,
-    private val contactsDao: ContactsDao,
-    private val messagesDao: MessagesDao,
-    private val activeConnections: ActiveConnections
+    private val liveAppSettings: LiveAppSettings,
+    private val activeConnections: ActiveConnections,
+    private val messageHandler: MessageHandler
 ) {
 
     private val supervisorJob = SupervisorJob()
@@ -40,13 +54,15 @@ class AppConnectionHandler(
 
     val activeConnectionsState: Flow<Set<ExternalUserId>> = activeConnections.state
 
-    private val awaitingMessages = mutableMapOf<Long, MutableStateFlow<AwaitingMessageState>>()
-
-    private val payloadBuffer = MutableSharedFlow<ByteArray>(0, 100, BufferOverflow.DROP_OLDEST)
+    private val payloadBuffer = MutableSharedFlow<ByteArray>(
+        replay = 0,
+        extraBufferCapacity = 100,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
 
     init {
         scope.launch(dispatchers.io) {
-            appSettings.data.collect {
+            liveAppSettings.appSettings.collect {
                 localUserName = it.userName
                 localUserId = it.userId
                 // TODO need to detect change and update connections accordingly
@@ -55,26 +71,7 @@ class AppConnectionHandler(
 
         scope.launch(dbContext) {
             payloadBuffer.collect { payloadBytes ->
-                val type = NearbyMessageType.fromByteArray(payloadBytes)
-
-                when (type) {
-                    is NearbyMessageType.Message -> {
-                        Timber.d("New message")
-                        handleMessage(type)
-                    }
-                    is NearbyMessageType.Name -> {
-                        Timber.d("New name")
-                        handleName(type)
-                    }
-                    is NearbyMessageType.Unknown -> {
-                        /*
-                            Note, this is for debugging in a hobby project. Please don't log
-                            potentially personal user data if your users think this data is
-                            secure.
-                         */
-                        Timber.e("Unknown message type with data: ${type.bytes.toHexString()}")
-                    }
-                }
+                messageHandler.handlePayloadBytes(payloadBytes)
             }
         }
     }
@@ -98,7 +95,7 @@ class AppConnectionHandler(
         }
 
         override fun onPayloadTransferUpdate(endpointId: String, update: PayloadTransferUpdate) {
-            val state = awaitingMessages[update.payloadId]
+            val state = messageHandler.getAwaitingMessage(update.payloadId)
 
             state?.value = when (update.status) {
                 PayloadTransferUpdate.Status.SUCCESS -> {
@@ -174,8 +171,8 @@ class AppConnectionHandler(
 
         scope.launch(dispatchers.io) {
             // This is a a brute force attempt that needs to be improved on
-            withTimeout(10_000) {
-                repeat(3) {
+            withTimeout(ENDPOINT_CONNECT_TIMEOUT) {
+                repeat(MAX_RECONNECT_ATTEMPTS) {
                     if (activeConnections.isConnectedToEndpoint(endpointId)) {
                         Timber.d("already connected")
                         return@withTimeout
@@ -198,7 +195,7 @@ class AppConnectionHandler(
                     }
 
                     if (isConnected) return@withTimeout
-                    delay(Random.nextLong(500L, 1000L))
+                    delay(Random.nextLong(RECONNECT_DELAY_LOW, RECONNECT_DELAY_HIGH))
                 }
             }
         }
@@ -242,82 +239,7 @@ class AppConnectionHandler(
         message: String,
         messageId: UUID
     ): Flow<NearbyMessageResult> {
-
-        val endpointId = activeConnections[externalUserId]
-
-        val sendState = if (endpointId == null) {
-            NearbyMessageResult.NoEndpoint
-        } else {
-            NearbyMessageResult.Sending
-        }
-
-        val dto = MessageDto(
-            uuid = messageId.toString(),
-            originUserId = localUserId,
-            targetUserId = externalUserId.id,
-            message = message,
-            timeSent = Instant.now().toEpochMilli(),
-            timeReceived = MessageDto.NO_RECEIVED_TIME,
-            sendState = sendState
-        )
-
-        messagesDao.insert(dto)
-
-        val resolvedMessage = messagesDao.getByUuid(messageId.toString())
-
-        return flow {
-            if (sendState is NearbyMessageResult.NoEndpoint) {
-                Timber.d("Attempted to send message to disconnected endpoint")
-                emit(sendState)
-                return@flow
-            }
-
-            emit(NearbyMessageResult.Sending)
-
-            val nearbyMessage = NearbyMessageType.Message(
-                uuid = dto.uuid,
-                originUserId = dto.originUserId,
-                message = dto.message,
-                timeSent = dto.timeSent
-            ).toByteArray()
-
-
-            val payload = Payload.fromBytes(nearbyMessage)
-
-            val result = sendPayloadForResult(payload, endpointId!!)
-
-            Timber.d("Result: $result")
-
-            when (result) {
-                AwaitingMessageState.Success -> {
-
-                    emit(NearbyMessageResult.Success)
-                }
-                AwaitingMessageState.Fail,
-                AwaitingMessageState.Created,
-                null -> {
-                    emit(NearbyMessageResult.Error)
-                }
-            }
-
-        }.onEach { messageResult ->
-            resolvedMessage?.let { resolvedDto ->
-                val updatedDto = when (messageResult) {
-                    NearbyMessageResult.Error,
-                    NearbyMessageResult.NoEndpoint,
-                    NearbyMessageResult.None,
-                    NearbyMessageResult.Sending -> resolvedDto.copy(
-                        sendState = messageResult
-                    )
-                    NearbyMessageResult.Success -> resolvedDto.copy(
-                        sendState = messageResult,
-                        timeReceived = Instant.now().toEpochMilli()
-                    )
-                }
-                messagesDao.update(updatedDto)
-            }
-        }
-
+        return messageHandler.sendMessage(externalUserId, message, messageId)
     }
 
     private fun startAdvertising() {
@@ -345,136 +267,17 @@ class AppConnectionHandler(
             }
     }
 
-    private suspend fun handleName(type: NearbyMessageType.Name) {
-        val contact = contactsDao.getByUserId(type.originUserId)
-
-        val lastSeen = Instant.now().toEpochMilli()
-
-        if (contact == null) {
-            val dto = ContactDto(
-                userName = type.name,
-                externalUserId = type.originUserId,
-                lastSeen = lastSeen
-            )
-            contactsDao.insert(dto)
-        } else {
-            contactsDao.updateContact(
-                contact.copy(
-                    userName = type.name,
-                    lastSeen = lastSeen
-                )
-            )
-        }
-
-        /*
-         * Sending here as a "name" is sent by the other client whenever we successfully establish
-         * a connection. A name means we're past the initialization of the connection and have
-         * up to date information on the other client.
-         */
-        sendUnsentMessages(ExternalUserId(type.originUserId))
-    }
-
-    private fun sendUnsentMessages(
-        externalUserId: ExternalUserId
-    ) {
-        val endpointId = activeConnections.getEndpoint(externalUserId)
-
-        endpointId ?: run {
-            Timber.w("Tried to send unsent messages to unknown endpoint for $externalUserId")
-            return
-        }
-
-        scope.launch(dbContext) {
-            val messages = messagesDao.getUnsentMessagesFromUser(externalUserId.id)
-            Timber.d("Unread messages $messages")
-            messages.forEach { dto ->
-                launch {
-                    val nearbyMessage = NearbyMessageType.Message(
-                        uuid = dto.uuid,
-                        originUserId = dto.originUserId,
-                        message = dto.message,
-                        timeSent = dto.timeSent,
-                    ).toByteArray()
-
-                    val payload = Payload.fromBytes(nearbyMessage)
-
-                    val resultingDto = when (sendPayloadForResult(payload, endpointId)) {
-                        AwaitingMessageState.Success -> {
-                            dto.copy(
-                                sendState = NearbyMessageResult.Success,
-                                timeReceived = Instant.now().toEpochMilli()
-                            )
-                        }
-                        AwaitingMessageState.Fail,
-                        AwaitingMessageState.Created,
-                        null -> {
-                            dto.copy(
-                                sendState = NearbyMessageResult.Error
-                            )
-                        }
-                    }
-
-                    messagesDao.update(resultingDto)
-                }
-            }
-        }
-    }
-
-    private suspend fun sendPayloadForResult(
-        payload: Payload,
-        endpointId: EndpointId
-    ): AwaitingMessageState? {
-        val awaitingState = MutableStateFlow<AwaitingMessageState>(AwaitingMessageState.Created)
-        awaitingMessages[payload.id] = awaitingState
-
-        nearbyClient.sendPayload(endpointId.id, payload)
-
-        val result = withTimeoutOrNull(MESSAGE_STATUS_WAIT_TIME) {
-            awaitingState.first {
-                it != AwaitingMessageState.Created
-            }
-        }
-
-        awaitingMessages.remove(payload.id)
-
-        return result
-    }
-
-    private suspend fun handleMessage(type: NearbyMessageType.Message) {
-        val dto = MessageDto(
-            uuid = type.uuid,
-            originUserId = type.originUserId,
-            targetUserId = localUserId,
-            message = type.message,
-            timeSent = type.timeSent,
-            timeReceived = Instant.now().toEpochMilli(),
-            sendState = NearbyMessageResult.None
-        )
-
-        messagesDao.insert(dto)
-
-        contactsDao.getByUserId(type.originUserId)?.copy(
-            lastSeen = Instant.now().toEpochMilli()
-        )?.also { contact ->
-            contactsDao.updateContact(contact)
-        }
-    }
-
     companion object {
 
         private const val SERVICE_ID = "me.danlowe.meshcommunicator"
 
-        private const val MESSAGE_STATUS_WAIT_TIME = 5_000L
+        private const val ENDPOINT_CONNECT_TIMEOUT = 10_000L
 
-    }
+        private const val RECONNECT_DELAY_LOW = 500L
 
-    private sealed class AwaitingMessageState {
+        private const val RECONNECT_DELAY_HIGH = 1000L
 
-        object Created : AwaitingMessageState()
-
-        object Success : AwaitingMessageState()
-
-        object Fail : AwaitingMessageState()
+        private const val MAX_RECONNECT_ATTEMPTS = 3
 
     }
 

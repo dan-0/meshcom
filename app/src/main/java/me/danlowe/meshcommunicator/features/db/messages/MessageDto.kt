@@ -1,6 +1,10 @@
 package me.danlowe.meshcommunicator.features.db.messages
 
-import androidx.room.*
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import androidx.room.TypeConverters
 import me.danlowe.meshcommunicator.features.nearby.data.NearbyMessageResult
 
 @Entity(

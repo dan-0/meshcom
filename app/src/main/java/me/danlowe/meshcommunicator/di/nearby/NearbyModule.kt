@@ -1,7 +1,6 @@
 package me.danlowe.meshcommunicator.di.nearby
 
 import android.content.Context
-import androidx.datastore.core.DataStore
 import com.google.android.gms.nearby.Nearby
 import com.google.android.gms.nearby.connection.ConnectionsClient
 import dagger.Module
@@ -9,11 +8,12 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import me.danlowe.meshcommunicator.AppSettings
+import me.danlowe.meshcommunicator.features.appsettings.LiveAppSettings
 import me.danlowe.meshcommunicator.features.db.AppDatabase
 import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
 import me.danlowe.meshcommunicator.features.nearby.ActiveConnections
 import me.danlowe.meshcommunicator.features.nearby.AppConnectionHandler
+import me.danlowe.meshcommunicator.features.nearby.MessageHandler
 import javax.inject.Singleton
 
 @Module
@@ -33,17 +33,16 @@ class NearbyModule {
     fun provideNearbyConnections(
         dispatchers: DispatcherProvider,
         nearbyClient: ConnectionsClient,
-        appSettings: DataStore<AppSettings>,
-        appDatabase: AppDatabase,
-        activeConnections: ActiveConnections
+        activeConnections: ActiveConnections,
+        liveAppSettings: LiveAppSettings,
+        incomingMessageHandler: MessageHandler
     ): AppConnectionHandler {
         return AppConnectionHandler(
-            dispatchers,
-            nearbyClient,
-            appSettings,
-            appDatabase.contactsDao(),
-            appDatabase.messagesDao(),
-            activeConnections
+            dispatchers = dispatchers,
+            nearbyClient = nearbyClient,
+            activeConnections = activeConnections,
+            liveAppSettings = liveAppSettings,
+            messageHandler = incomingMessageHandler,
         )
     }
 
@@ -51,6 +50,25 @@ class NearbyModule {
     @Singleton
     fun provideActiveConnections(): ActiveConnections {
         return ActiveConnections()
+    }
+
+    @Provides
+    @Singleton
+    fun provideIncomingMessageHandler(
+        dispatchers: DispatcherProvider,
+        appDatabase: AppDatabase,
+        liveAppSettings: LiveAppSettings,
+        nearbyClient: ConnectionsClient,
+        activeConnections: ActiveConnections,
+    ): MessageHandler {
+        return MessageHandler(
+            dispatchers = dispatchers,
+            contactsDao = appDatabase.contactsDao(),
+            messagesDao = appDatabase.messagesDao(),
+            liveAppSettings = liveAppSettings,
+            nearbyClient = nearbyClient,
+            activeConnections = activeConnections
+        )
     }
 
 }

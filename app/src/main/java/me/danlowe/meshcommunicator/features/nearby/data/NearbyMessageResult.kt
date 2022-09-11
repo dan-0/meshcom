@@ -4,25 +4,26 @@ sealed class NearbyMessageResult(
     val id: Int
 ) {
 
-    object None : NearbyMessageResult(-1)
+    object None : NearbyMessageResult(id = -1)
 
-    object Error : NearbyMessageResult(0)
+    object Error : NearbyMessageResult(id = 0)
 
-    object NoEndpoint : NearbyMessageResult(1)
+    object NoEndpoint : NearbyMessageResult(id = 1)
 
-    object Sending : NearbyMessageResult(2)
+    object Sending : NearbyMessageResult(id = 2)
 
-    object Success : NearbyMessageResult(3)
+    object Success : NearbyMessageResult(id = 3)
 
     companion object {
 
         fun idToResult(id: Int): NearbyMessageResult {
             return when (id) {
-                0 -> Error
-                1 -> NoEndpoint
-                2 -> Sending
-                3 -> Success
-                else -> None
+                None.id -> None
+                Error.id -> Error
+                NoEndpoint.id -> NoEndpoint
+                Sending.id -> Sending
+                Success.id -> Success
+                else -> throw IllegalArgumentException("Unknown ID $id")
             }
         }
 

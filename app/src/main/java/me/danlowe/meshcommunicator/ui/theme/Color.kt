@@ -1,3 +1,4 @@
+@Suppress("MagicNumber")
 package me.danlowe.meshcommunicator.ui.theme
 
 import androidx.compose.ui.graphics.Color

@@ -6,6 +6,7 @@ plugins {
     id "com.google.protobuf"
     id 'kotlin-parcelize'
     id 'kotlinx-serialization'
+    id 'io.gitlab.arturbosch.detekt'
 }
 
 android {
@@ -67,6 +68,13 @@ android {
             }
         }
     }
+
+    detekt {
+        toolVersion = "1.21.0"
+        config = files("config/detekt/detekt.yml")
+        buildUponDefaultConfig = true
+    }
+
 }
 
 protobuf {

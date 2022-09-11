@@ -13,7 +13,7 @@ import me.danlowe.meshcommunicator.ui.screen.signin.data.SignInState
 import me.danlowe.meshcommunicator.util.ext.EventFlow
 import me.danlowe.meshcommunicator.util.ext.getMutableStateFlow
 import me.danlowe.meshcommunicator.util.ext.launchInContext
-import java.util.*
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -59,7 +59,13 @@ class SignInViewModel @Inject constructor(
         }
     }
 
-    private fun isUsernameValid(userName: String) = userName.length in 5..55
+    private fun isUsernameValid(userName: String) = userName.length in VALID_USERNAME_SIZE_RANGE
+
+    companion object {
+
+        val VALID_USERNAME_SIZE_RANGE = 5..55
+
+    }
 
 }
 

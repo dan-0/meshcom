@@ -9,10 +9,10 @@ import timber.log.Timber
 
 class ActiveConnections {
 
-    private val activeConnections = hashMapOf<ExternalUserId, EndpointId>()
+    private val _activeConnections = hashMapOf<ExternalUserId, EndpointId>()
 
     operator fun get(externalUserId: ExternalUserId): EndpointId? {
-        return activeConnections[externalUserId]
+        return _activeConnections[externalUserId]
     }
 
     private val _activeConnectionsState = MutableSharedFlow<Set<ExternalUserId>>(1, 0, BufferOverflow.DROP_OLDEST)
@@ -28,35 +28,35 @@ class ActiveConnections {
      */
     fun addConnection(endpointId: EndpointId, externalUserId: ExternalUserId): Boolean {
         Timber.d("Adding connection $endpointId")
-        val hasUserId = activeConnections.contains(externalUserId)
-        activeConnections[externalUserId] = endpointId
-        _activeConnectionsState.tryEmit(activeConnections.keys)
+        val hasUserId = _activeConnections.contains(externalUserId)
+        _activeConnections[externalUserId] = endpointId
+        _activeConnectionsState.tryEmit(_activeConnections.keys)
         return !hasUserId
     }
 
     fun removeConnection(endpointId: EndpointId) {
         Timber.d("Removing connection $endpointId")
-        val connection = activeConnections.firstNotNullOfOrNull { entry ->
+        val connection = _activeConnections.firstNotNullOfOrNull { entry ->
             if (entry.value == endpointId) {
                 entry.key
             } else {
                 null
             }
         }
-        activeConnections.remove(connection)
-        _activeConnectionsState.tryEmit(activeConnections.keys)
+        _activeConnections.remove(connection)
+        _activeConnectionsState.tryEmit(_activeConnections.keys)
     }
 
     fun getEndpoint(externalUserId: ExternalUserId): EndpointId? {
-        return activeConnections[externalUserId]
+        return _activeConnections[externalUserId]
     }
 
     fun isConnectedToEndpoint(endpointId: EndpointId): Boolean {
-        return activeConnections.values.contains(endpointId)
+        return _activeConnections.values.contains(endpointId)
     }
 
     fun clear() {
-        activeConnections.clear()
-        _activeConnectionsState.tryEmit(activeConnections.keys)
+        _activeConnections.clear()
+        _activeConnectionsState.tryEmit(_activeConnections.keys)
     }
 }

@@ -32,9 +32,9 @@ sealed class AppDestinations(
         R.string.title_nearby_permissions
     )
 
-    object Conversation : AppDestinations(
-        "Conversation",
-        R.string.title_conversation
+    object Chat : AppDestinations(
+        "Chat",
+        R.string.title_chat
     ) {
 
         const val PARAM_EXTERNAL_USER_ID = "PARAM_EXTERNAL_USER_ID"
