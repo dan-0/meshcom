@@ -35,7 +35,6 @@ sealed class NearbyMessageType {
         val originUserId: String,
         val message: String,
         val timeSent: Long,
-        val timeReceived: Long,
     ) : NearbyMessageType()
 
     /**

@@ -1,4 +1,4 @@
-package me.danlowe.meshcommunicator.ui.screen.conversation
+package me.danlowe.meshcommunicator.ui.screen.chat
 
 import androidx.datastore.core.DataStore
 import androidx.lifecycle.SavedStateHandle
@@ -7,12 +7,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import me.danlowe.meshcommunicator.AppSettings
+import me.danlowe.meshcommunicator.features.db.messages.MessageDto
 import me.danlowe.meshcommunicator.features.db.messages.MessagesDao
 import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
 import me.danlowe.meshcommunicator.features.dispatchers.buildHandledIoContext
 import me.danlowe.meshcommunicator.features.nearby.AppConnectionHandler
 import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
 import me.danlowe.meshcommunicator.nav.AppDestinations
+import me.danlowe.meshcommunicator.ui.screen.chat.data.ChatData
+import me.danlowe.meshcommunicator.ui.screen.chat.data.ChatState
 import me.danlowe.meshcommunicator.util.ext.asMilliToInstant
 import me.danlowe.meshcommunicator.util.ext.getMutableStateFlow
 import me.danlowe.meshcommunicator.util.ext.launchInContext
@@ -23,7 +26,7 @@ import java.util.*
 import javax.inject.Inject
 
 @HiltViewModel
-class ConversationViewModel @Inject constructor(
+class ChatViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     dispatchers: DispatcherProvider,
     private val messagesDao: MessagesDao,
@@ -38,11 +41,11 @@ class ConversationViewModel @Inject constructor(
         ExternalUserId(it)
     }
 
-    private val _state = savedStateHandle.getMutableStateFlow<ConversationState>(
+    private val _state = savedStateHandle.getMutableStateFlow<ChatState>(
         key = "ConversationViewModelState",
-        defaultValue = ConversationState.Loading
+        defaultValue = ChatState.Loading
     )
-    val state: Flow<ConversationState> = _state
+    val state: Flow<ChatState> = _state
 
     private val messageContext = dispatchers.buildHandledIoContext {
         // TODO Trigger event to notify user of error
@@ -60,18 +63,33 @@ class ConversationViewModel @Inject constructor(
             messagesDao.getAllAsFlow().collect { messages ->
 
                 val messageData = messages.map { dto ->
-                    MessageData(
-                        originUserId = ExternalUserId(dto.originUserId),
-                        message = dto.message,
-                        timeSent = timeFormatter.instantToMediumLocalizedDateTime(
-                            dto.timeSent.asMilliToInstant()
-                        ),
-                        timeReceived = dto.timeReceived.toIso8601String(),
-                        isFromLocalUser = settings.userId == dto.originUserId
-                    )
+                    if (settings.userId == dto.originUserId) {
+                        ChatData.SentChat(
+                            message = dto.message,
+                            timeSent = timeFormatter.instantToMediumLocalizedDateTime(
+                                dto.timeSent.asMilliToInstant()
+                            ),
+                            timeReceived = dto.timeReceived.let { timeReceived ->
+                                if (timeReceived == MessageDto.NO_RECEIVED_TIME) {
+                                    null
+                                } else {
+                                    timeReceived.toIso8601String()
+                                }
+                            }
+                        )
+                    } else {
+                        ChatData.ReceivedChat(
+                            originUserId = ExternalUserId(id = ""),
+                            message = dto.message,
+                            timeSent = timeFormatter.instantToMediumLocalizedDateTime(
+                                dto.timeSent.asMilliToInstant()
+                            ),
+                            timeReceived = dto.timeReceived.toIso8601String()
+                        )
+                    }
                 }
 
-                _state.value = ConversationState.Content(messageData)
+                _state.value = ChatState.Content(messageData)
             }
         }
     }
