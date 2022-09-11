@@ -290,7 +290,10 @@ class AppConnectionHandler(
             Timber.d("Result: $result")
 
             when (result) {
-                AwaitingMessageState.Success -> emit(NearbyMessageResult.Success)
+                AwaitingMessageState.Success -> {
+
+                    emit(NearbyMessageResult.Success)
+                }
                 AwaitingMessageState.Fail,
                 AwaitingMessageState.Created,
                 null -> {
@@ -300,9 +303,19 @@ class AppConnectionHandler(
 
         }.onEach { messageResult ->
             resolvedMessage?.let { resolvedDto ->
-                resolvedDto.copy(sendState = messageResult).also {
-                    messagesDao.update(it)
+                val updatedDto = when (messageResult) {
+                    NearbyMessageResult.Error,
+                    NearbyMessageResult.NoEndpoint,
+                    NearbyMessageResult.None,
+                    NearbyMessageResult.Sending -> resolvedDto.copy(
+                        sendState = messageResult
+                    )
+                    NearbyMessageResult.Success -> resolvedDto.copy(
+                        sendState = messageResult,
+                        timeReceived = Instant.now().toEpochMilli()
+                    )
                 }
+                messagesDao.update(updatedDto)
             }
         }
 
