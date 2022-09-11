@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import me.danlowe.meshcommunicator.AppSettings
+import me.danlowe.meshcommunicator.features.db.messages.MessageDto
 import me.danlowe.meshcommunicator.features.db.messages.MessagesDao
 import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
 import me.danlowe.meshcommunicator.features.dispatchers.buildHandledIoContext
@@ -68,7 +69,13 @@ class ChatViewModel @Inject constructor(
                             timeSent = timeFormatter.instantToMediumLocalizedDateTime(
                                 dto.timeSent.asMilliToInstant()
                             ),
-                            timeReceived = dto.timeReceived.toIso8601String()
+                            timeReceived = dto.timeReceived.let { timeReceived ->
+                                if (timeReceived == MessageDto.NO_RECEIVED_TIME) {
+                                    null
+                                } else {
+                                    timeReceived.toIso8601String()
+                                }
+                            }
                         )
                     } else {
                         ChatData.ReceivedChat(

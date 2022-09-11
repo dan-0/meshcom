@@ -18,7 +18,7 @@ sealed class ChatData : Parcelable {
     data class SentChat(
         val message: String,
         val timeSent: String,
-        val timeReceived: String,
+        val timeReceived: String?,
     ) : ChatData()
 
 }

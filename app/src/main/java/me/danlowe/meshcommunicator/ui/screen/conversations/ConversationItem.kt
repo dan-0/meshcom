@@ -11,7 +11,6 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -20,6 +19,8 @@ import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationConn
 import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationInfo
 import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationsNavEvent
 import me.danlowe.meshcommunicator.ui.theme.Dimens
+import me.danlowe.meshcommunicator.ui.theme.OkGreen
+import me.danlowe.meshcommunicator.ui.theme.UnknownGrey
 
 @Composable
 fun ConversationItem(
@@ -59,8 +60,8 @@ fun ConversationItem(
         }
 
         val backgroundColor = when (conversation.connectionState) {
-            ConversationConnectionState.Connected -> Color.Green
-            ConversationConnectionState.NotConnected -> Color.LightGray
+            ConversationConnectionState.Connected -> OkGreen
+            ConversationConnectionState.NotConnected -> UnknownGrey
         }
 
         Box(

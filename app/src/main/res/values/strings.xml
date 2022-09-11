@@ -18,4 +18,6 @@
     <string name="btn_text_request_permissions">Request permissions</string>
     <string name="title_conversation">Conversation</string>
     <string name="btn_text_send">Send</string>
+    <string name="content_description_item_not_received">Item not received</string>
+    <string name="content_description_item_received">Item received</string>
 </resources>
