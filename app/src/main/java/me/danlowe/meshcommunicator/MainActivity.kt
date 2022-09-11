@@ -147,7 +147,7 @@ class MainActivity : ComponentActivity() {
 
                     }
 
-                    composableDestination(AppDestinations.Chat) { backStack, destination ->
+                    composableDestination(AppDestinations.Chat) { backStack, _ ->
                         val userName = AppDestinations.Chat.userNameFromBackstack(backStack)
                         updateTitle(userName)
                         ChatScreen()
