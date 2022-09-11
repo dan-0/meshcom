@@ -22,7 +22,7 @@ import me.danlowe.meshcommunicator.util.ext.launchInContext
 import me.danlowe.meshcommunicator.util.ext.toIso8601String
 import me.danlowe.meshcommunicator.util.helper.time.TimeFormatter
 import timber.log.Timber
-import java.util.*
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -36,7 +36,7 @@ class ChatViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val externalUserId = savedStateHandle.get<String>(
-        AppDestinations.Conversation.PARAM_EXTERNAL_USER_ID
+        AppDestinations.Chat.PARAM_EXTERNAL_USER_ID
     )!!.let {
         ExternalUserId(it)
     }

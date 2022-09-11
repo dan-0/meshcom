@@ -10,7 +10,7 @@ import java.time.chrono.IsoChronology
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.time.format.FormatStyle
-import java.util.*
+import java.util.Locale
 
 class TimeFormatter(
     @ApplicationContext private val context: Context

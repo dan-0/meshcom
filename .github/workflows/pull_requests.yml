@@ -4,10 +4,19 @@ on:
   pull_request:
 
 jobs:
-  build:
+  check:
+    name: Build Integrity
     runs-on: ubuntu-latest
     steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.10.0
+        with:
+          access_token: ${{ github.token }}
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Run Unit tests
         run: ./gradlew testDebugUnitTest
+      - name: Run Detekt
+        run: ./gradlew detekt
+      - name: Assemble Build
+        run: ./gradlew assemble

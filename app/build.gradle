@@ -6,6 +6,7 @@ plugins {
     id "com.google.protobuf"
     id 'kotlin-parcelize'
     id 'kotlinx-serialization'
+    id 'io.gitlab.arturbosch.detekt'
 }
 
 android {
@@ -55,6 +56,28 @@ android {
         }
     }
 
+    sourceSets {
+        main {
+            proto {
+                // In addition to the default 'src/main/proto'
+                srcDir 'src/main/protobuf'
+                srcDir 'src/main/protocolbuffers'
+                // In addition to the default '**/*.proto' (use with caution).
+                // Using an extension other than 'proto' is NOT recommended,
+                // because when proto files are published along with class files, we can
+                // only tell the type of a file from its extension.
+                include '**/*.protodevel'
+            }
+        }
+        test {
+            proto {
+                // In addition to the default 'src/test/proto'
+                srcDir 'src/test/protocolbuffers'
+            }
+        }
+    }
+
+
     kapt {
         correctErrorTypes = true
     }
@@ -67,11 +90,18 @@ android {
             }
         }
     }
+
+    detekt {
+        toolVersion = "1.21.0"
+        config = files("config/detekt/detekt.yml")
+        buildUponDefaultConfig = true
+    }
+
 }
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.20.1"
+        artifact = "com.google.protobuf:protoc:3.21.5"
     }
 
     plugins {

@@ -44,6 +44,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @Suppress("LongMethod")
     @Composable
     private fun App() {
 
@@ -135,7 +136,7 @@ class MainActivity : ComponentActivity() {
                             when (navEvent) {
                                 is ConversationsNavEvent.OpenConversation -> {
                                     navController.navigate(
-                                        AppDestinations.Conversation.buildRoute(
+                                        AppDestinations.Chat.buildRoute(
                                             externalUserId = navEvent.externalUserId,
                                             userName = navEvent.userName
                                         )
@@ -146,8 +147,8 @@ class MainActivity : ComponentActivity() {
 
                     }
 
-                    composableDestination(AppDestinations.Conversation) { backStack, destination ->
-                        val userName = AppDestinations.Conversation.userNameFromBackstack(backStack)
+                    composableDestination(AppDestinations.Chat) { backStack, _ ->
+                        val userName = AppDestinations.Chat.userNameFromBackstack(backStack)
                         updateTitle(userName)
                         ChatScreen()
                     }
