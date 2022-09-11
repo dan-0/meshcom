@@ -4,7 +4,8 @@ on:
   pull_request:
 
 jobs:
-  build:
+  check:
+    name: Build Integrity
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -13,3 +14,5 @@ jobs:
         run: ./gradlew testDebugUnitTest
       - name: Run Detekt
         run: ./gradlew detekt
+      - name: Assemble Build
+        run: ./gradlew assemble
