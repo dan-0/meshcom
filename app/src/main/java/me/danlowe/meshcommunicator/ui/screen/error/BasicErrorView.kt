@@ -33,13 +33,20 @@ fun BasicErrorView(
         Text(
             text = stringResource(R.string.error),
             modifier = Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .testTag("errorText"),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.h5
         )
         onRefresh?.let { refresh ->
-            Spacer(modifier = Modifier.height(Dimens.BaseItemSeparation))
-            StandardButton(buttonText = R.string.cta_refresh) {
+            Spacer(modifier = Modifier
+                .height(Dimens.BaseItemSeparation)
+                .testTag("errorRefreshSpacer")
+            )
+            StandardButton(
+                buttonText = R.string.cta_refresh,
+                modifier = Modifier.testTag("refreshButton")
+            ) {
                 refresh()
             }
         }
