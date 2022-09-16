@@ -24,11 +24,14 @@ jobs:
     runs-on: macos-latest
     name: UI Tests
     steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.10.0
+        with:
+          access_token: ${{ github.token }}
       - name: checkout
         uses: actions/checkout@v3
-
       - name: run tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 31
+          api-level: 29
           script: ./gradlew connectedCheck
