@@ -1,12 +1,11 @@
 package me.danlowe.meshcommunicator.ui.screen.chat
 
-import androidx.datastore.core.DataStore
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import me.danlowe.meshcommunicator.AppSettings
+import me.danlowe.meshcommunicator.features.appsettings.LiveAppSettings
 import me.danlowe.meshcommunicator.features.db.messages.MessageDto
 import me.danlowe.meshcommunicator.features.db.messages.MessagesDao
 import me.danlowe.meshcommunicator.features.dispatchers.DispatcherProvider
@@ -31,7 +30,7 @@ class ChatViewModel @Inject constructor(
     dispatchers: DispatcherProvider,
     private val messagesDao: MessagesDao,
     private val appConnectionHandler: AppConnectionHandler,
-    private val appSettings: DataStore<AppSettings>,
+    private val appSettings: LiveAppSettings,
     private val timeFormatter: TimeFormatter
 ) : ViewModel() {
 
@@ -48,17 +47,24 @@ class ChatViewModel @Inject constructor(
     val state: Flow<ChatState> = _state
 
     private val messageContext = dispatchers.buildHandledIoContext {
-        // TODO Trigger event to notify user of error
+        // Stub,
     }
 
     private val dbContext = dispatchers.buildHandledIoContext {
-        // Stub
+        _state.value = ChatState.Error
     }
 
-    init {
-        launchInContext(dbContext) {
+    private var messagesJob: Job? = null
 
-            val settings = appSettings.data.first()
+    init {
+        observeMessages()
+    }
+
+    fun observeMessages() {
+        messagesJob?.cancel()
+        messagesJob = launchInContext(dbContext) {
+
+            val settings = appSettings.appSettings.value
 
             messagesDao.getAllAsFlow().collect { messages ->
 
@@ -79,7 +85,7 @@ class ChatViewModel @Inject constructor(
                         )
                     } else {
                         ChatData.ReceivedChat(
-                            originUserId = ExternalUserId(id = ""),
+                            originUserId = ExternalUserId(id = dto.originUserId),
                             message = dto.message,
                             timeSent = timeFormatter.instantToMediumLocalizedDateTime(
                                 dto.timeSent.asMilliToInstant()

@@ -1,4 +1,4 @@
-package me.danlowe.meshcommunicator.di.datastore
+package me.danlowe.meshcommunicator.di.appsettings
 
 import dagger.Binds
 import dagger.Module

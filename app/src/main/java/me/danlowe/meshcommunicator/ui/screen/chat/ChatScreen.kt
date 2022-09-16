@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -49,6 +50,7 @@ import me.danlowe.meshcommunicator.features.nearby.data.ExternalUserId
 import me.danlowe.meshcommunicator.ui.button.StandardButton
 import me.danlowe.meshcommunicator.ui.screen.chat.data.ChatData
 import me.danlowe.meshcommunicator.ui.screen.chat.data.ChatState
+import me.danlowe.meshcommunicator.ui.screen.error.BasicErrorView
 import me.danlowe.meshcommunicator.ui.screen.loading.FullLoadingScreen
 import me.danlowe.meshcommunicator.ui.theme.Dimens
 import me.danlowe.meshcommunicator.ui.theme.OkGreen
@@ -74,8 +76,7 @@ fun ChatScreen(
             )
         }
         ChatState.Error -> {
-            // TODO make a real error view
-            Text("Error")
+            BasicErrorView(viewModel::observeMessages)
         }
         ChatState.Loading -> FullLoadingScreen()
     }
@@ -93,12 +94,14 @@ private fun ChatContent(
     ConstraintLayout(
         modifier = Modifier
             .fillMaxSize()
+            .testTag("chatContent")
     ) {
 
         val (messagesView, divider, sendBox) = createRefs()
 
         LazyColumn(
             modifier = Modifier
+                .testTag("chatMessages")
                 .constrainAs(messagesView) {
                     top.linkTo(parent.top)
                     end.linkTo(parent.end)
@@ -155,7 +158,9 @@ private fun ChatContent(
 @Composable
 private fun MessageToUser(chat: ChatData.ReceivedChat) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("messageToUser"),
         horizontalAlignment = Alignment.Start
     ) {
         MessageText(
@@ -170,7 +175,9 @@ private fun MessageToUser(chat: ChatData.ReceivedChat) {
 @Composable
 private fun MessageFromUser(chat: ChatData.SentChat) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("messageFromUser"),
         horizontalAlignment = Alignment.End
     ) {
         MessageText(
@@ -194,6 +201,7 @@ private fun MessageReceivedIndicator(chat: ChatData.SentChat) {
                 .clip(CircleShape)
                 .size(12.dp)
                 .background(UnknownGrey)
+                .testTag("messageReceivedIndicatorNotReceived")
         )
     } else {
         Icon(
@@ -204,6 +212,7 @@ private fun MessageReceivedIndicator(chat: ChatData.SentChat) {
                 .clip(CircleShape)
                 .size(12.dp)
                 .background(OkGreen)
+                .testTag("messageReceivedIndicatorReceived")
         )
     }
 }
@@ -222,7 +231,8 @@ private fun MessageText(
             color = textColor,
             modifier = Modifier
                 .background(backgroundColor)
-                .padding(Dimens.MessagePadding),
+                .padding(Dimens.MessagePadding)
+                .testTag("messageText"),
         )
     }
 }
@@ -232,6 +242,7 @@ private fun MessageTimeText(timeSent: String) {
     Text(
         text = timeSent,
         style = MaterialTheme.typography.caption,
+        modifier = Modifier.testTag("messageTimeText"),
         fontSize = 10.sp
     )
 }
