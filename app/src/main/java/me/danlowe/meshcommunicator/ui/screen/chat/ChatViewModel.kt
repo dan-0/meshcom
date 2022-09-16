@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import me.danlowe.meshcommunicator.AppSettings
@@ -48,15 +49,22 @@ class ChatViewModel @Inject constructor(
     val state: Flow<ChatState> = _state
 
     private val messageContext = dispatchers.buildHandledIoContext {
-        // TODO Trigger event to notify user of error
+        // Stub,
     }
 
     private val dbContext = dispatchers.buildHandledIoContext {
-        // Stub
+        _state.value = ChatState.Error
     }
 
+    private var messagesJob: Job? = null
+
     init {
-        launchInContext(dbContext) {
+        observeMessages()
+    }
+
+    fun observeMessages() {
+        messagesJob?.cancel()
+        messagesJob = launchInContext(dbContext) {
 
             val settings = appSettings.data.first()
 
