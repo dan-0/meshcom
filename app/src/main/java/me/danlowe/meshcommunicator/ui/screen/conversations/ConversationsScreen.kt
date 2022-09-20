@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.hilt.navigation.compose.hiltViewModel
 import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationInfo
 import me.danlowe.meshcommunicator.ui.screen.conversations.data.ConversationsNavEvent
@@ -37,7 +38,8 @@ private fun ConversationsList(
             .padding(
                 horizontal = Dimens.BaseHorizontalSpace,
                 vertical = Dimens.BaseTopBottomPadding
-            ),
+            )
+            .testTag("conversationList"),
         verticalArrangement = Arrangement.spacedBy(Dimens.BaseItemSeparation)
     ) {
         items(conversations) { conversation ->

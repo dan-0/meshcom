@@ -17,6 +17,7 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.compose.ConstraintLayout
@@ -51,7 +52,8 @@ fun ConversationItem(
                             externalUserId = ExternalUserId(conversation.userId),
                         )
                     )
-                },
+                }
+                .testTag("conversationCard"),
             elevation = 2.dp,
         ) {
             Column(
@@ -76,6 +78,7 @@ fun ConversationItem(
                 .clip(CircleShape)
                 .background(backgroundColor)
                 .border(1.dp, MaterialTheme.colors.primaryVariant, CircleShape)
+                .testTag("conversationStateIndicator")
                 .constrainAs(connectionIndicator) {
                     top.linkTo(conversationCard.top)
                     bottom.linkTo(conversationCard.top)
@@ -98,7 +101,9 @@ private fun ConversationMessageRow(conversation: ConversationInfo) {
         conversation.lastMessage?.let { lastMessage ->
             Text(
                 text = "\"$lastMessage\"",
-                style = MaterialTheme.typography.body2
+                style = MaterialTheme.typography.body2,
+                modifier = Modifier
+                    .testTag("conversationLastMessage")
             )
         }
     }
@@ -113,12 +118,15 @@ private fun ConversationDataRow(conversation: ConversationInfo) {
         Text(
             text = conversation.userName,
             maxLines = 1,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .testTag("conversationUserName"),
             style = MaterialTheme.typography.body1
         )
         Text(
             text = conversation.lastSeen,
-            style = MaterialTheme.typography.caption
+            style = MaterialTheme.typography.caption,
+            modifier = Modifier.testTag("conversationLastSeen")
         )
     }
 }
