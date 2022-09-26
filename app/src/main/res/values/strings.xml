@@ -11,10 +11,6 @@
     <string name="btn_text_sign_in">Sign In</string>
     <string name="username_error">Username must be between 5 and 55 characters</string>
     <string name="prompt_permissions">Before using MeshCommunicator we require the following permissions in order to communicate with other devices:</string>
-    <string name="permission_text_location">Fine Location</string>
-    <string name="permission_text_bt_advertise">Bluetooth Advertise</string>
-    <string name="permission_text_bt_connect">Bluetooth Connect</string>
-    <string name="permission_text_bt_scan">Bluetooth Scan</string>
     <string name="btn_text_request_permissions">Request permissions</string>
     <string name="title_chat">Chat</string>
     <string name="btn_text_send">Send</string>
@@ -22,4 +18,14 @@
     <string name="content_description_item_received">Item received</string>
     <string name="cta_refresh">Refresh</string>
     <string name="error">Error</string>
+
+    <!-- Permissions -->
+    <string name="permission_text_location">Fine Location</string>
+    <string name="permission_rationale_location">MeshCommunicator uses bluetooth to communicate. Bluetooth can potentially be used to derive user location so your permission is needed to allow functionality. Without this permission, MeshCommunicator cannot function.</string>
+    <string name="permission_text_bt_advertise">Bluetooth Advertise</string>
+    <string name="permission_rationale_bt_advertise">MeshCommunicator uses bluetooth to communicate. To notify other users in your proximity that you are available to chat MeshCommunicator requires this permission. Without this permission, MeshCommunicator cannot function.</string>
+    <string name="permission_text_bt_connect">Bluetooth Connect</string>
+    <string name="permission_rationale_bt_connect">MeshCommunicator uses bluetooth to communicate. In order to connect with and communicate with other users MeshCommunicator requires this permission. Without this permission, MeshCommunicator cannot function.</string>
+    <string name="permission_text_bt_scan">Bluetooth Scan</string>
+    <string name="permission_rationale_bt_scan">MeshCommunicator uses bluetooth to communicate. In order to find other users to communicate with users MeshCommunicator requires this permission. Without this permission, MeshCommunicator cannot function.</string>
 </resources>
