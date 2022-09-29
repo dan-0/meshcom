@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
@@ -21,7 +23,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
@@ -64,16 +65,19 @@ private fun getMultiplePermissionState(): MultiplePermissionsState {
 
 @Composable
 private fun PermissionScreenContent(permissions: MultiplePermissionsState) {
-    // TODO: Missing shouldShowRationale check, see issue #11
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(Dimens.BasePadding),
+            .padding(Dimens.BasePadding)
+            .verticalScroll(rememberScrollState())
+            .testTag("permissionScreenContent"),
         verticalArrangement = Arrangement.spacedBy(Dimens.BaseItemSeparation)
     ) {
         Text(
             text = stringResource(R.string.prompt_permissions),
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .testTag("permissionPrompt")
         )
 
         if (permissions.containsNonGrantedPermission(Manifest.permission.ACCESS_FINE_LOCATION)) {
@@ -155,18 +159,4 @@ private fun PermissionText(
             )
         }
     }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun PermissionPreview() {
-    val dangerousPermissions = listOf(
-        Manifest.permission.ACCESS_FINE_LOCATION,
-    )
-
-    val permissions = rememberMultiplePermissionsState(
-        permissions = dangerousPermissions
-    )
-
-    PermissionScreenContent(permissions = permissions)
 }
