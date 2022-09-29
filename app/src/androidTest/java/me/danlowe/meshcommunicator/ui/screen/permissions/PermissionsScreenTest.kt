@@ -1,8 +1,10 @@
 package me.danlowe.meshcommunicator.ui.screen.permissions
 
 import android.Manifest
+import android.os.Build
 import androidx.annotation.StringRes
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -14,6 +16,7 @@ import io.mockk.every
 import io.mockk.mockk
 import me.danlowe.meshcommunicator.R
 import me.danlowe.meshcommunicator.test.base.BaseComposeHiltTest
+import me.danlowe.meshcommunicator.test.helper.getStringById
 import me.danlowe.meshcommunicator.ui.theme.MeshCommunicatorTheme
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -55,7 +58,12 @@ class PermissionsScreenTest : BaseComposeHiltTest() {
     fun contentStateNoRationale() {
 
         // given
-        val mockPermissions = listOf(Manifest.permission.ACCESS_FINE_LOCATION)
+        val mockPermissions = listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.BLUETOOTH_ADVERTISE,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_SCAN,
+        )
 
         val permissions: MultiplePermissionsState = mockk(relaxed = true) {
             every { allPermissionsGranted } returns false
@@ -79,7 +87,8 @@ class PermissionsScreenTest : BaseComposeHiltTest() {
             .assertIsDisplayed()
 
         composeTestRule
-            .onNodeWithTag("permissionTextColumn${R.string.permission_text_location}")
+            .onNodeWithTag("permissionText${R.string.permission_text_location}")
+            .assertTextEquals(getStringById(R.string.permission_text_location))
             .assertIsDisplayed()
 
         composeTestRule
@@ -92,7 +101,7 @@ class PermissionsScreenTest : BaseComposeHiltTest() {
     fun contentStateWithRationale() {
 
         // given
-        val mockPermissions = listOf(
+        val permissionStrings = listOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.BLUETOOTH_ADVERTISE,
             Manifest.permission.BLUETOOTH_CONNECT,
@@ -102,7 +111,7 @@ class PermissionsScreenTest : BaseComposeHiltTest() {
         val permissions: MultiplePermissionsState = mockk(relaxed = true) {
             every { allPermissionsGranted } returns false
             every { shouldShowRationale } returns true
-            every { permissions } returns mockPermissions.map {
+            every { permissions } returns permissionStrings.map {
                 getMockPermissionState(it, PermissionStatus.Denied(true))
             }
         }
@@ -125,20 +134,34 @@ class PermissionsScreenTest : BaseComposeHiltTest() {
             rationaleId = R.string.permission_rationale_location
         )
 
-        assertPermissionWithRationale(
-            textId = R.string.permission_text_bt_advertise,
-            rationaleId = R.string.permission_rationale_bt_advertise
-        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            assertPermissionWithRationale(
+                textId = R.string.permission_text_bt_advertise,
+                rationaleId = R.string.permission_rationale_bt_advertise
+            )
 
-        assertPermissionWithRationale(
-            textId = R.string.permission_text_bt_connect,
-            rationaleId = R.string.permission_rationale_bt_connect
-        )
+            assertPermissionWithRationale(
+                textId = R.string.permission_text_bt_connect,
+                rationaleId = R.string.permission_rationale_bt_connect
+            )
 
-        assertPermissionWithRationale(
-            textId = R.string.permission_text_bt_scan,
-            rationaleId = R.string.permission_rationale_bt_scan
-        )
+            assertPermissionWithRationale(
+                textId = R.string.permission_text_bt_scan,
+                rationaleId = R.string.permission_rationale_bt_scan
+            )
+        } else {
+            composeTestRule
+                .onNodeWithTag("permissionTextColumn${R.string.permission_text_bt_advertise}")
+                .assertDoesNotExist()
+
+            composeTestRule
+                .onNodeWithTag("permissionTextColumn${R.string.permission_text_bt_connect}")
+                .assertDoesNotExist()
+
+            composeTestRule
+                .onNodeWithTag("permissionTextColumn${R.string.permission_text_bt_scan}")
+                .assertDoesNotExist()
+        }
 
     }
 
@@ -159,13 +182,15 @@ class PermissionsScreenTest : BaseComposeHiltTest() {
     private fun assertPermissionWithRationale(@StringRes textId: Int, @StringRes rationaleId: Int) {
 
         composeTestRule
-            .onNodeWithTag("permissionTextColumn$textId")
+            .onNodeWithTag("permissionText$textId")
             .performScrollTo()
+            .assertTextEquals(getStringById(textId))
             .assertIsDisplayed()
 
         composeTestRule
             .onNodeWithTag("permissionRationale$rationaleId")
             .performScrollTo()
+            .assertTextEquals(getStringById(rationaleId))
             .assertIsDisplayed()
     }
 
