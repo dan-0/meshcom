@@ -19,6 +19,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import dagger.hilt.android.AndroidEntryPoint
 import me.danlowe.meshcommunicator.nav.AppDestinations
 import me.danlowe.meshcommunicator.ui.screen.chat.ChatScreen
@@ -115,17 +116,20 @@ class MainActivity : ComponentActivity() {
 
                         updateTitle(stringResource(destination.title))
 
-                        PermissionsScreen { navEvent ->
-                            when (navEvent) {
-                                PermissionsNavEvent.PermissionsGranted -> {
-                                    navController.navigate(
-                                        AppDestinations.Conversations.routeTemplate
-                                    ) {
-                                        popUpTo(0)
+                        @OptIn(ExperimentalPermissionsApi::class)
+                        PermissionsScreen(
+                            navHandler = { navEvent ->
+                                when (navEvent) {
+                                    PermissionsNavEvent.PermissionsGranted -> {
+                                        navController.navigate(
+                                            AppDestinations.Conversations.routeTemplate
+                                        ) {
+                                            popUpTo(0)
+                                        }
                                     }
                                 }
                             }
-                        }
+                        )
                     }
 
                     composableDestination(AppDestinations.Conversations) { _, destination ->
